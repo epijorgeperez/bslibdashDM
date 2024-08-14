@@ -1,0 +1,116 @@
+
+```{r}
+library(readr)
+library(tidyverse)
+```
+
+
+```{r}
+indicadores <- read_csv("data/tb_datos_historico_indicadores.csv")
+View(indicadores)
+```
+
+
+```{r}
+selected_year <- 2017
+selected_type <- "Unidad"
+selected_indicator <- "DM 01"
+
+
+data <- indicadores %>%
+    filter(anio == selected_year, tipo == selected_type, nom_indicador == selected_indicator) %>%
+    mutate(
+      Valor_Indicador = indicador,
+      Mes = factor(mes_i, levels = 1:12, labels = month.abb)
+    ) %>%
+    select(
+      Mes,
+      Indicador = nom_indicador,
+      Numerador = numerador,
+      Denominador = denominador,
+      Valor_Indicador
+    ) %>%
+    arrange(Mes)
+```
+
+
+```{r}
+data %>%
+        gt() %>%
+        tab_header(
+          title = md(paste("**Indicador de Diabetes:**", selected_indicator)),
+          subtitle = md(paste0("**Año:** ", selected_year, " | **Unidad Médica:** ", "UMF 168", " | **Tipo:** ", selected_type))
+        ) %>%
+        fmt_number(
+          columns = c(Numerador, Denominador),
+          decimals = 0,
+          use_seps = TRUE
+        ) %>%
+        fmt_number(
+          columns = Valor_Indicador,
+          decimals = 2
+        ) %>%
+        cols_label(
+          Mes = md("**Mes**"),
+          Numerador = md("**Numerador**"),
+          Denominador = md("**Denominador**"),
+          Valor_Indicador = md("**Valor del Indicador**")
+        ) %>%
+        tab_style(
+          style = list(
+            cell_borders(
+              sides = "bottom",
+              color = "#D3D3D3",
+              weight = px(1)
+            )
+          ),
+          locations = cells_body()
+        ) %>%
+        tab_style(
+          style = list(
+            cell_fill(color = "#F0F0F0"),
+            cell_text(weight = "bold")
+          ),
+          locations = cells_column_labels()
+        ) %>%
+        tab_options(
+          table.width = px(800),
+          table.border.top.style = "hidden",
+          table.border.bottom.style = "hidden",
+          column_labels.border.top.style = "hidden",
+          column_labels.border.bottom.color = "#666666",
+          column_labels.border.bottom.width = 2,
+          table_body.border.bottom.color = "#666666",
+          table_body.border.bottom.width = 2,
+          data_row.padding = px(10),
+          source_notes.font.size = 12,
+          table.font.size = 14,
+          heading.title.font.size = 18,
+          heading.subtitle.font.size = 14
+        ) %>%
+        tab_style(
+          style = cell_text(color = "#666666"),
+          locations = cells_body()
+        ) %>%
+        tab_source_note(
+          source_note = md("*Fuente: Sistema de Información de Diabetes*")
+        ) %>%
+        opt_css(
+          css = "
+            .gt_table {
+              font-family: Arial, sans-serif;
+            }
+            .gt_heading {
+              background-color: #FFFFFF;
+              border-bottom: 2px solid #666666;
+              padding-bottom: 10px;
+            }
+            .gt_title {
+              color: #333333;
+            }
+            .gt_subtitle {
+              color: #666666;
+            }
+          "
+        )
+```
