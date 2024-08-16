@@ -18,15 +18,15 @@ load_data <- function(query) {
 
 
 # Example of loading specific tables
- censo <- load_data("SELECT * FROM tb_censo_DM")
+ pob <- load_data("SELECT * FROM tb_poblacion")
  #consultas <- load_data("SELECT * FROM tb_consulta_dm")
  #indicadores <- load_data("SELECT * FROM dbo.tb_datos_historico_indicadores")
- #incapacidades <- load_data("SELECT * FROM dbo.tb_dm_incap")
+ incapacidades <- load_data("SELECT * FROM dbo.tb_dm_incap")
  #poblacion <- load_data("SELECT * FROM dbo.tb_poblacion")
-mortalidad <- load_data("SELECT * FROM dbo.MORTA_UNIDAD")
-incidencia <- load_data("SELECT * FROM dbo.MORBI_DIABETES")
+mortalidad <- load_data("SELECT * FROM dbo.MORTA_OOAD")
+incid <- load_data("SELECT * FROM MORBI_DM WHERE cve_delega = 14")
+cuums <- load_data("SELECT * FROM CUUMS_MAESTRO")
 
-
-censo <- load_data("SELECT * FROM tb_poblacion")
-write_csv(censo, "data/tb_poblacion.csv")
+#censo <- load_data("SELECT * FROM tb_poblacion")
+write_csv(cuums, "data/cuums_maestro.csv")
 #write_csv(incidencia, "data/tb_incidencia_dm.csv")

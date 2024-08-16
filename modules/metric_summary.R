@@ -62,7 +62,7 @@ metric_summary_server <- function(id, totales_anuales, totales_consultas, totale
       filtered <- totales_anuales() %>%
         filter(
           Anio == anio(),
-          Nombre_OOAD == ooad(),
+          #Nombre_OOAD == ooad(),
           Nombre_Unidad == unidad_medica()
         )
       # Return the filtered data
@@ -75,7 +75,7 @@ metric_summary_server <- function(id, totales_anuales, totales_consultas, totale
         filter(
           Anio == anio(),
           #Nombre_OOAD == ooad(),
-          #Nombre_Unidad == unidad_medica()
+          Nombre_Unidad == "Nacional"
         )
       # Return the filtered data
       filtered
@@ -87,7 +87,7 @@ metric_summary_server <- function(id, totales_anuales, totales_consultas, totale
         filter(
           #Parametro == "Consulta_MF",
           Anio == anio(),
-          Nombre_OOAD == ooad(),
+          #Nombre_OOAD == ooad(),
           Nombre_Unidad == unidad_medica()
         )
       # Return the filtered data
@@ -127,7 +127,7 @@ incap_nac <- reactive({
         )
       # Return the filtered data
       filtered_i
-    })    
+    })  
 
 filtered_incid <- reactive({
   # Accessing the reactive 'totales_hosp' from the server environment
@@ -146,7 +146,7 @@ incid_nac <- reactive({
     filter(
       Anio == anio(),
       #Nombre_OOAD == ooad(),
-      #Nombre_Unidad == unidad_medica()
+      Nombre_Unidad == unidad_medica()
     )
   filtered_in_nac
 })
@@ -211,7 +211,7 @@ mort_nac <- reactive({
     filter(
       Anio == anio(),
       #Nombre_OOAD == ooad(),
-      #Nombre_Unidad == unidad_medica()
+      Nombre_Unidad == unidad_medica()
     )
   filtered_m
 })
@@ -260,13 +260,13 @@ mort_nac <- reactive({
     })
 #Incapacidades
     output$disabilities <- renderText({ 
-      paste0(formatC(filtered_incap()$Dato, big.mark = ",", format = "f", digits = 0), " días totales") 
+      paste0(formatC(filtered_incap()$Dato, big.mark = ",", format = "f", digits = 1), " días por 100 DH RT") 
     })
     output$disabilities_prom <- renderText({ 
       paste0(formatC(filtered_incap()$Dato_prom, big.mark = ",", format = "f", digits = 0), " días por inc.") 
     })
     output$disabilities_nac <- renderText({ 
-      paste0(formatC(incap_nac()$Dato, big.mark = ",", format = "f", digits = 0), " días totales") 
+      paste0(formatC(incap_nac()$Dato, big.mark = ",", format = "f", digits = 1), " días por 100 DH RT") 
     })
     output$disabilities_nac_prom <- renderText({ 
       paste0(formatC(incap_nac()$Dato_prom, big.mark = ",", format = "f", digits = 0), " días por inc.") 

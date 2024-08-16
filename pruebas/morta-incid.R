@@ -17,14 +17,18 @@ library(tidyr)
 #totales_incidencia <- reactiveVal({
     #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
     data <- read_csv("data/tb_incidencia_dm.csv")
-    data <- data %>% 
-      group_by(anio, cve_presupuestal) %>%
-      summarise(Pacientes_DM = sum(no_totales, na.rm = TRUE)) %>%
-      inner_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>%
-                mutate(Dato = Pacientes_DM/totales_poblacion*100000) %>%
-      rename(Nombre_Unidad = nombre_unidad, Anio = anio)
-    data
-#})
+    data %>%
+    # Filter for total rows (assuming 'TTotal' in grupos represents total)
+    filter(grupos == "TTotal") %>%
+    # Group by year and cve_presupuestal, sum the cases
+    group_by(anio, cve_presupuestal) %>%
+    summarise(Pacientes_DM = sum(casos, na.rm = TRUE), .groups = "drop") %>%
+    # Join with population totals
+    inner_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
+    # Calculate incidence rate
+    mutate(Dato = Pacientes_DM / totales_poblacion * 100000) %>%
+    # Rename columns
+    rename(Nombre_Unidad = nombre_unidad, Anio = anio)
 
 
 incid_nac <- reactive({
@@ -143,3 +147,5 @@ data <- read_csv("data/tb_incidencia_dm.csv") %>%
         group_by(grupo_edad, sexo) %>%
         summarise(Casos = sum(Dato, na.rm = TRUE), .groups = 'drop')
 
+pob %>% left_join(cuums %>% select(ClavePresupuestal, UnidadInformacionPREI),
+                by = c("Cve_Presupuestal" = "ClavePresupuestal"))

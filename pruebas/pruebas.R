@@ -34,7 +34,7 @@ dy_graph
 
 
 data <- read_csv("data/tb_censo_DM.csv")
-    data %>%
+    data %>% filter(Nombre_Unidad == "Jalisco") %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad) %>%
       summarise(Pacientes_DM = sum(Pacientes_DM, na.rm = TRUE), 
                 PAMF = sum(PAMF, na.rm = TRUE),

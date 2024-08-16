@@ -8,7 +8,7 @@ source("modules/indicadores_table.R")
 function(input, output, session) {
   
   observeEvent(totales_anuales(), {
-    updateSelectInput(session, "anio", choices = sort(unique(totales_anuales()$Anio), decreasing = TRUE))
+    updateSelectInput(session, "anio", choices = c(2024:2014), selected = 2023)
     updateSelectInput(session, "ooad", choices = sort(unique(totales_anuales()$Nombre_OOAD)))
     updateSelectInput(session, "unidad_medica", choices = sort(unique(totales_anuales()$Nombre_Unidad)))
   })

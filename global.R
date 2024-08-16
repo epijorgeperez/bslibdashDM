@@ -13,6 +13,7 @@ library(echarts4r)
 library(leaflet)
 library(xts)
 library(gt)
+library(stringr)
 
 # Connection string to establish a connection to the SQL Server database
 #connection_details <- dbConnect(odbc::odbc(), 
@@ -37,30 +38,63 @@ library(gt)
 # global.R
 metric_choices <- c("Incidencia", "Prevalencia", "Consultas", "Hospitalizaciones", "Mortalidad", "Incapacidades")
 
+#PAMF
 poblacion <- read_csv("data/tb_poblacion.csv")
   poblacion_totales <- poblacion %>%
-    filter(Sexo == 0) %>%
+    filter(Sexo == 0, Parametro =="PAMF") %>%
     group_by(Anio, Cve_Presupuestal, Nombre_Unidad)%>%
     summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop') %>%
     mutate(Cve_Presupuestal = as.character(Cve_Presupuestal))
     names(poblacion_totales) <- tolower(names(poblacion_totales))
 
 poblacion_gpoedad <- poblacion %>%
-    filter(Sexo != 0, Grupo_edad != "NI") %>%
+    filter(Sexo != 0, Grupo_edad != "NI", Parametro == "PAMF") %>%
     group_by(Anio, Cve_Presupuestal, Nombre_Unidad, Sexo, Grupo_edad)%>%
     summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop')
 
 poblacion_gpoedad_incid <- poblacion_gpoedad %>%
     mutate(Grupo_edad = case_when(
-            Grupo_edad %in% c("65 a 69", "70 a 74", "75 a 79", "80 a 84", "85 y mas") ~ "65 y mas",
-            Grupo_edad %in% c("25 a 29", "30 a 34", "35 a 39", "40 a 44") ~ "25 a 44",
-            Grupo_edad %in% c("50 a 54", "55 a 59") ~ "50 a 59",
-            TRUE ~ Grupo_edad)) %>%
+      Grupo_edad == "00 a 04" ~ "de00_a_04",
+      Grupo_edad == "05 a 09" ~ "de05_a_09",
+      Grupo_edad == "10 a 14" ~ "de10_a_14",
+      Grupo_edad == "15 a 19" ~ "de15_a_19",
+      Grupo_edad == "20 a 24" ~ "de20_a_24",
+      Grupo_edad %in% c("25 a 29", "30 a 34", "35 a 39", "40 a 44") ~ "de25_a_44",
+      Grupo_edad == "45 a 49" ~ "de45_a_49",
+      Grupo_edad %in% c("50 a 54", "55 a 59") ~ "de50_a_59",
+      Grupo_edad == "60 a 64" ~ "de60_a_64",
+      Grupo_edad %in% c("65 a 69", "70 a 74", "75 a 79", "80 a 84", "85 y mas") ~ "de65ymas",
+      TRUE ~ Grupo_edad)) %>%
     group_by(Anio, Cve_Presupuestal, Nombre_Unidad, Sexo, Grupo_edad) %>%
     summarise(Totales_Poblacion = sum(Totales_Poblacion, na.rm = TRUE), .groups = 'drop') %>%
     mutate(Cve_Presupuestal = as.character(Cve_Presupuestal))
 names(poblacion_gpoedad_incid)<- tolower(names(poblacion_gpoedad_incid))
 
+#Poblacion Riesgo de Trabajo
+
+cuums <- read_csv("data/cuums_maestro.csv")
+
+poblacion_rt <- poblacion %>% filter(Parametro == "PAU RT") %>%
+                left_join(cuums %>% select(ClavePresupuestal, cve_prei = UnidadInformacionPREI),
+                          by = c("Cve_Presupuestal" = "ClavePresupuestal")) %>%
+                mutate(cve_prei = case_when(Nombre_Unidad == "Jalisco" ~ "14",
+                                            Nombre_Unidad == "Nacional" ~ "99",
+                                            TRUE ~ cve_prei))
+
+poblacion_totales_rt <- poblacion_rt %>%
+  filter(Sexo == 0) %>%
+  group_by(Anio, Cve_Presupuestal, Nombre_Unidad, cve_prei)%>%
+  summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop') %>%
+  mutate(Cve_Presupuestal = as.character(Cve_Presupuestal))
+  names(poblacion_totales_rt) <- tolower(names(poblacion_totales_rt))
+
+poblacion_gpoedad_rt <- poblacion_rt %>%
+    filter(Sexo != 0, Grupo_edad != "NI") %>%
+    group_by(Anio, Cve_Presupuestal, Nombre_Unidad, Sexo, Grupo_edad, cve_prei)%>%
+    summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop')
+
+
+#Datos para gráficos
 data_censo <- reactiveVal({
   data <- read_csv("data/tb_censo_DM.csv") %>%
             rename(Dato= Pacientes_DM) #Pacientes_DM -> Numero de pacientes Prevalencia_DM -> prevalencia
@@ -71,6 +105,7 @@ data_consulta <- reactiveVal(read_csv("data/tb_consulta_dm.csv"))
 
 data_incapacidad <- reactiveVal({
   data <- read_csv("data/tb_dm_incap.csv") %>%
+
     rename(Anio = PERIODO, Nombre_Unidad = descnivel, Grupo_edad = descgedad, Sexo = TIP_SEXO)%>%
     rename(Dato = NDIAS)
   data
@@ -81,22 +116,24 @@ data_hosp <- reactiveVal(read_csv("data/tb_egreso_dm.csv"))
 
 data_incidencia <- reactiveVal({
 data <- read_csv("data/tb_incidencia_dm.csv") %>%
-    select(c(1,2,12:36))%>%
-    group_by(cve_presupuestal, anio) %>%
-    summarise_all(sum)%>%
-    mutate(de00_a_04 = menores_1 + de01_a_04, 
-            de00_a_04f = menores_1f + de01_a_04f)%>%
-    select(1,2,28,3:14, 29, 15:27) %>%
-    select(-c("menores_1", "menores_1f", "de01_a_04", "de01_a_04f", "se_ignoran", "se_ignoraf", "no_totales")) %>%
-    pivot_longer(cols = 3:last_col(), names_to = "gpoedadsexo", values_to = "casos")%>%
-    mutate(sexo = ifelse(grepl("f$", gpoedadsexo), 2, 1)) %>%
-    mutate(grupo_edad = sub("de([0-9]+)_a_([0-9]+)", "\\1 a \\2", gpoedadsexo))%>%
-    mutate(grupo_edad = sub("f$", "", grupo_edad))%>%
-    mutate(grupo_edad = ifelse(grepl("de65", grupo_edad), "65 y mas", grupo_edad)) %>%
-    select(1,2,6,5,4)%>%
-    full_join(poblacion_gpoedad_incid, by = c("cve_presupuestal", "sexo", "anio", "grupo_edad")) %>%
-    mutate(Dato = casos/totales_poblacion*100000)%>%
-    rename(Anio = anio, Nombre_Unidad = nombre_unidad, Sexo = sexo, Grupo_edad = grupo_edad)
+    filter(grupos != "TTotal" & grupos != "seignora")%>%
+    # Group by relevant columns and sum cases
+    group_by(cve_presupuestal, anio, cve_delega, cve_diagno, sexo, grupos) %>%
+    mutate(grupos = case_when(grupos %in% c("men1", "de01_a_04") ~ "de00_a_04", 
+      TRUE ~ grupos)) %>%
+    summarise(casos = sum(casos), .groups = "drop") %>%
+    # Join with population data
+    full_join(poblacion_gpoedad_incid, 
+              by = c("cve_presupuestal", "sexo" = "sexo", "anio" = "anio", "grupos" = "grupo_edad")) %>%
+    # Calculate incidence rate
+    mutate(Dato = casos / totales_poblacion * 100000) %>%
+    # Rename columns to match the previous format
+    rename(
+      Anio = anio,
+      Nombre_Unidad = nombre_unidad,
+      Sexo = sexo,
+      Grupo_edad = grupos
+    )
 
 data
   
@@ -122,7 +159,7 @@ data
 
 
 
-
+## Datos para métricas 
 #Prevalencia
 totales_anuales <- reactiveVal({
     #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
@@ -142,7 +179,7 @@ totales_consultas <- reactiveVal({
     #data <- load_data("SELECT * FROM tb_consulta_DM")
     data <- read_csv("data/tb_consulta_dm.csv")
     data %>% 
-      filter (Parametro == 'Consulta_MF', Sexo == 0) %>%
+      filter (Parametro == 'Consulta_MF', Sexo == 0, Grupo_edad=="Total") %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal) %>%
       summarise(Dato = sum(Dato, na.rm = TRUE), .groups = 'drop') %>%
       rename(anio = Anio, cve_presupuestal = Cve_Presupuestal) %>%
@@ -152,19 +189,22 @@ totales_consultas <- reactiveVal({
 })
 
 totales_incap <- reactiveVal({
-    tryCatch({
-    #data <- load_data("SELECT * FROM tb_dm_incap")
     data <- read_csv("data/tb_dm_incap.csv")
-    data %>% 
-      group_by(Anio = PERIODO, Nombre_Unidad = descnivel) %>%
-      summarise(Dato = sum(NDIAS, na.rm = TRUE), 
+    data <- data %>% 
+      rename(Anio = PERIODO, Nombre_Unidad = descnivel) %>%
+      group_by(Anio, Nombre_Unidad, NIVEL) %>%
+      summarise(ndias = sum(NDIAS, na.rm = TRUE), 
                 Dato_prom = (sum(NDIAS, na.rm = TRUE)/sum(FREC, na.rm = TRUE)),
-                .groups = 'drop')
-  }, error = function(e) {
-    # Handle any errors that occur when loading the data
-    showNotification(paste("Error loading data:", e$message), type = "error")
-    return(NULL)
-  })
+                .groups = 'drop') %>%
+      mutate(NIVEL = as.character(NIVEL)) %>%
+      left_join(poblacion_totales_rt %>% select(cve_prei, anio, totales_poblacion), 
+                by = c('NIVEL' = 'cve_prei', "Anio" = "anio")) %>%
+      mutate(Dato = ndias/totales_poblacion*100) %>%
+      mutate(Nombre_Unidad = case_when(is.na(Nombre_Unidad) ~ NA_character_,
+                                       Nombre_Unidad == "14 Jalisco" ~ "Jalisco",
+                                       Nombre_Unidad == "99 Nacional" ~ "Nacional",
+                                       TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
+    data
 })
 
 totales_hosp <- reactiveVal({
@@ -172,7 +212,7 @@ totales_hosp <- reactiveVal({
     #data <- load_data("SELECT * FROM tb_egreso_dm")
     data <- read_csv("data/tb_egreso_dm.csv")
     data %>%
-      filter(Sexo == 0, Parametro == "Egresos_DM") %>%
+      filter(Sexo == 0, Parametro == "Egresos_DM", Especialidad == "Total", Grupo_edad=="Total") %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal) %>%
       summarise(Dato = sum(Dato, na.rm = TRUE),.groups = 'drop') %>%
       rename(anio = Anio, cve_presupuestal = Cve_Presupuestal) %>%
@@ -203,16 +243,22 @@ totales_dias_estancia<- reactiveVal({
 })
 
 totales_incidencia <- reactiveVal({
+  data <- read_csv("data/tb_incidencia_dm.csv")
     #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
-    data <- read_csv("data/tb_incidencia_dm.csv")
-    data <- data %>% 
-      group_by(anio, cve_presupuestal) %>%
-      summarise(Pacientes_DM = sum(no_totales, na.rm = TRUE)) %>%
-      #left_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>% cambie a inner join porque solo tengo población de Tepatitlán.
-      inner_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>%
-                mutate(Dato = Pacientes_DM/totales_poblacion*100000) %>%
-      rename(Nombre_Unidad = nombre_unidad, Anio = anio)
-    data
+  data <- data %>%
+    # Filter for total rows (assuming 'TTotal' in grupos represents total)
+    filter(grupos == "TTotal") %>%
+    # Group by year and cve_presupuestal, sum the cases
+    group_by(anio, cve_presupuestal) %>%
+    summarise(Pacientes_DM = sum(casos, na.rm = TRUE), .groups = "drop") %>%
+    # Join with population totals
+    inner_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
+    # Calculate incidence rate
+    mutate(Dato = Pacientes_DM / totales_poblacion * 100000) %>%
+    # Rename columns
+    rename(Nombre_Unidad = nombre_unidad, Anio = anio)
+
+  data
 })
 
 totales_mortalidad <- reactiveVal({
@@ -229,13 +275,10 @@ totales_mortalidad <- reactiveVal({
     data                
 })
 
-data_censo_maestro <- reactiveVal(read_csv("data/CUMMS_MAESTRO.csv"))
-
+data_censo_maestro <- reactiveVal(read_csv("data/cuums_maestro.csv"))
 citiesmx <- reactiveVal(read_csv("data/citiesmx.csv"))
 
 data_indicadores <- reactiveVal(read_csv("data/tb_datos_historico_indicadores.csv"))
-
-
 
 
 
