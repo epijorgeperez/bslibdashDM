@@ -10,6 +10,8 @@ time_chart_UI <- function(id) {
   )
 }
 
+library(htmlwidgets)
+
 time_chart_server <- function(id, metrica, totales_anuales, totales_consultas, totales_incap, totales_hosp, totales_mortalidad, totales_incidencia, ooad, unidad_medica) {
   moduleServer(id, function(input, output, session) {
     output$time_chart <- renderDygraph({
@@ -32,6 +34,11 @@ time_chart_server <- function(id, metrica, totales_anuales, totales_consultas, t
       y_range <- range(filtered$Dato, na.rm = TRUE)
       y_padding <- diff(y_range) * 0.1  # Add 10% padding
 
+      # Custom JavaScript function for formatting dates
+      formatDate <- JS("function(d) {
+        return d.getFullYear();
+      }")
+
       # Creating the dygraph
       dygraph(filtered, xlab = "Año", ylab = metrica()) %>%
         dySeries('Dato', label = metrica(), strokeWidth = 2, color = "steelblue") %>%
@@ -43,7 +50,7 @@ time_chart_server <- function(id, metrica, totales_anuales, totales_consultas, t
           colors = ("steelblue")
         ) %>%
         dyAxis("y", label = metrica(), valueRange = c(y_range[1] - y_padding, y_range[2] + y_padding)) %>%
-        dyAxis("x", label = "Año") %>%
+        dyAxis("x", label = "Año", axisLabelFormatter = formatDate) %>%
         #dyRangeSelector() %>%
         dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE) %>%
         #dyRoller(rollPeriod = 1) %>%

@@ -1,7 +1,7 @@
 library(readr)
 library(dplyr)
 library(stringr)
-
+library(echarts4r)
 #totales_consultas
 data <- read_csv("data/tb_consulta_DM.csv")
   totales_consultas<-  data %>% 
@@ -71,6 +71,42 @@ data <- read_csv("data/tb_dm_incap.csv")
 
 
 
+data <- read_csv("data/tb_dm_incap.csv") %>%
+    rename(Anio = PERIODO, Nombre_Unidad = descnivel, Grupo_edad = descgedad, Sexo = TIP_SEXO)%>%
+    group_by(Anio, Nombre_Unidad, NIVEL, Grupo_edad, Sexo) %>%
+      summarise(Dato = sum(NDIAS, na.rm = TRUE), 
+                Dato_prom = (sum(NDIAS, na.rm = TRUE)/sum(FREC, na.rm = TRUE)),
+                .groups = 'drop') %>%
+      mutate(Nombre_Unidad = case_when(is.na(Nombre_Unidad) ~ NA_character_,
+            Nombre_Unidad == "14 Jalisco" ~ "Jalisco",
+            Nombre_Unidad == "99 Nacional" ~ "Nacional",
+            TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
+data
+
+
+filtered <- data %>% 
+        filter(Anio == 2023,  Nombre_Unidad == "HGZMF 9 Cd. Guzmán", Sexo %in% c(1, 2)) #Nombre_OOAD == ooad(), agregar filtro de ooad si es necesario
+       
+      # To stack by sex, ensure 'Sexo' is a factor with the desired level names
+      filtered$Sexo <- factor(filtered$Sexo, levels = c(1, 2), labels = c("Hombre", "Mujer"))
+  
+      # Group and summarise data
+      data_grouped <- filtered %>%
+        group_by(Grupo_edad, Sexo) %>%
+        summarise(Casos = sum(Dato, na.rm = TRUE), .groups = 'drop')
+
+      # Create the echarts4r graph with stacked bars
+      data_grouped %>%
+        pivot_wider(names_from = Sexo, values_from = Casos) %>%
+        #mutate(total = Hombre + Mujer) %>%
+        e_charts(Grupo_edad)%>%
+        e_bar(Mujer, stack = "grp", itemStyle = list(color = "pink")) %>%
+        e_bar(Hombre, stack = "grp", itemStyle = list(color = "#3838a3")) %>%
+        e_axis_labels(x = "Grupos de edad") |> # axis labels
+       # e_title("Casos de Diabetes por sexo y edad") |>  # Add title & subtitle
+        e_theme("infographic") |>  # theme
+        e_legend(right = 0) |>  # move legend to the bottom
+        e_tooltip(trigger = "axis") # tooltip
 
 
 

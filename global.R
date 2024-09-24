@@ -105,9 +105,15 @@ data_consulta <- reactiveVal(read_csv("data/tb_consulta_dm.csv"))
 
 data_incapacidad <- reactiveVal({
   data <- read_csv("data/tb_dm_incap.csv") %>%
-
     rename(Anio = PERIODO, Nombre_Unidad = descnivel, Grupo_edad = descgedad, Sexo = TIP_SEXO)%>%
-    rename(Dato = NDIAS)
+    group_by(Anio, Nombre_Unidad, NIVEL, Grupo_edad, Sexo) %>%
+      summarise(Dato = sum(NDIAS, na.rm = TRUE), 
+                Dato_prom = (sum(NDIAS, na.rm = TRUE)/sum(FREC, na.rm = TRUE)),
+                .groups = 'drop') %>%
+      mutate(Nombre_Unidad = case_when(is.na(Nombre_Unidad) ~ NA_character_,
+            Nombre_Unidad == "14 Jalisco" ~ "Jalisco",
+            Nombre_Unidad == "99 Nacional" ~ "Nacional",
+            TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
   data
 })
 
@@ -134,9 +140,7 @@ data <- read_csv("data/tb_incidencia_dm.csv") %>%
       Sexo = sexo,
       Grupo_edad = grupos
     )
-
 data
-  
 })
 
 

@@ -41,7 +41,7 @@ age_sex_graph_server <- function(id, metrica, data_censo, data_consulta, data_in
       # Create the echarts4r graph with stacked bars
       data_grouped %>%
         pivot_wider(names_from = Sexo, values_from = Casos) %>%
-        mutate(total = Hombre + Mujer) %>%
+        #mutate(total = Hombre + Mujer) %>%
         e_charts(Grupo_edad)%>%
         e_bar(Mujer, stack = "grp", itemStyle = list(color = "pink")) %>%
         e_bar(Hombre, stack = "grp", itemStyle = list(color = "#3838a3"))%>%
