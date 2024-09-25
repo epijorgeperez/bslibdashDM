@@ -26,7 +26,7 @@ load_data <- function(query) {
 mortalidad <- load_data("SELECT * FROM dbo.MORTA_OOAD")
 incid <- load_data("SELECT * FROM MORBI_DM WHERE cve_delega = 14")
 cuums <- load_data("SELECT * FROM CUUMS_MAESTRO")
-
+egresos <- load_data("SELECT * FROM dbo.tb_egreso_dm")
 #censo <- load_data("SELECT * FROM tb_poblacion")
-write_csv(cuums, "data/cuums_maestro.csv")
+write_csv(egresos, "data/tb_egreso_dm.csv")
 #write_csv(incidencia, "data/tb_incidencia_dm.csv")

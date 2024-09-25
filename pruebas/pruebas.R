@@ -7,6 +7,7 @@ library(dplyr)
 #totales_anuales
     data <- read_csv("data/tb_censo_DM.csv")
     data <- data %>%
+      mutate(Nombre_Unidad = ifelse(nchar(Cve_Presupuestal) < 3 & Cve_Presupuestal != "00", "OOAD", Nombre_Unidad)) %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad) %>%
       summarise(Pacientes_DM = sum(Pacientes_DM, na.rm = TRUE), 
                 PAMF = sum(PAMF, na.rm = TRUE),

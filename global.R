@@ -83,7 +83,7 @@ poblacion_rt <- poblacion %>% filter(Parametro == "PAU RT") %>%
 
 poblacion_totales_rt <- poblacion_rt %>%
   filter(Sexo == 0) %>%
-  group_by(Anio, Cve_Presupuestal, Nombre_Unidad, cve_prei)%>%
+  group_by(Anio, Cve_Presupuestal, Nombre_Unidad, cve_prei, Nombre_OOAD)%>%
   summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop') %>%
   mutate(Cve_Presupuestal = as.character(Cve_Presupuestal))
   names(poblacion_totales_rt) <- tolower(names(poblacion_totales_rt))
@@ -170,6 +170,7 @@ totales_anuales <- reactiveVal({
     data <- read_csv("data/tb_censo_DM.csv")
     data %>% 
       filter (Sexo == 0) %>%
+      mutate(Nombre_Unidad = ifelse(nchar(Cve_Presupuestal) < 3 & Cve_Presupuestal != "00", "OOAD", Nombre_Unidad)) %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad) %>%
       summarise(Pacientes_DM = sum(Pacientes_DM, na.rm = TRUE), 
                 PAMF = sum(PAMF, na.rm = TRUE),
@@ -182,8 +183,8 @@ totales_consultas <- reactiveVal({
 
     #data <- load_data("SELECT * FROM tb_consulta_DM")
     data <- read_csv("data/tb_consulta_dm.csv")
-    data %>% 
-      filter (Parametro == 'Consulta_MF', Sexo == 0, Grupo_edad=="Total") %>%
+    data <- data %>% 
+      filter(Parametro == 'Consulta_MF', Sexo == 0, Grupo_edad=="Total") %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal) %>%
       summarise(Dato = sum(Dato, na.rm = TRUE), .groups = 'drop') %>%
       rename(anio = Anio, cve_presupuestal = Cve_Presupuestal) %>%
@@ -191,6 +192,7 @@ totales_consultas <- reactiveVal({
       mutate(Dato2 = Dato/totales_poblacion*1000) %>%
       select(Anio = anio,Nombre_OOAD, Nombre_Unidad, Dato, totales_poblacion, Dato2)
 })
+
 
 totales_incap <- reactiveVal({
     data <- read_csv("data/tb_dm_incap.csv")
@@ -201,11 +203,13 @@ totales_incap <- reactiveVal({
                 Dato_prom = (sum(NDIAS, na.rm = TRUE)/sum(FREC, na.rm = TRUE)),
                 .groups = 'drop') %>%
       mutate(NIVEL = as.character(NIVEL)) %>%
-      left_join(poblacion_totales_rt %>% select(cve_prei, anio, totales_poblacion), 
+      left_join(poblacion_totales_rt %>% select(cve_prei, nombre_ooad, anio, totales_poblacion), 
                 by = c('NIVEL' = 'cve_prei', "Anio" = "anio")) %>%
       mutate(Dato = ndias/totales_poblacion*100) %>%
+      ##cambiar este case_when para que funcione cuando se agreguen mas estados, se puede hacer
+      ##un join con la tabla de estados que se puede extraer del cuums_maestro
       mutate(Nombre_Unidad = case_when(is.na(Nombre_Unidad) ~ NA_character_,
-                                       Nombre_Unidad == "14 Jalisco" ~ "Jalisco",
+                                       str_detect(Nombre_Unidad, "^\\d{2} ") & !str_detect(Nombre_Unidad, "^99 ") ~ "OOAD",
                                        Nombre_Unidad == "99 Nacional" ~ "Nacional",
                                        TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
     data
