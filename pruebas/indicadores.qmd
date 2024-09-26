@@ -8,6 +8,8 @@ library(tidyverse)
 ```{r}
 indicadores <- read_csv("data/tb_datos_historico_indicadores.csv")
 View(indicadores)
+
+
 ```
 
 

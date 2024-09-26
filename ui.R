@@ -6,6 +6,7 @@ source("modules/time_chart.R")
 source("modules/map_chart.R")
 source("modules/test_mod.R")
 source("modules/indicadores_table.R")
+source("modules/indicadores_cruce.R")
 
 ui <- page_navbar(
   title = tagList(
@@ -69,6 +70,17 @@ ui <- page_navbar(
         full_screen = TRUE,
         card_header("Indicadores"),
         indicadores_table_UI("indicadores_table")
+      )
+    )
+  ),
+  nav_panel(
+    title = "Proceso DM y su impacto",
+    layout_column_wrap(
+      width = 1,
+      card(
+        full_screen = TRUE,
+        card_header("Indicadores a través del tiempo"),
+        indicadores_cruce_UI("indicadores_cruce")
       )
     )
   )
