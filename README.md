@@ -13,11 +13,11 @@ y aquí -> https://github.com/epijorgeperez/bslibdashDM/blob/main/Documentos.md
 
 Para correr el dashboard localmente: 
 
-1) Abre tu terminal (powershell, bash) y clona el repositorio: ``` git clone https://github.com/epijorgeperez/shinydashDM.git ```
+1) Abre tu terminal (powershell, bash) y clona el repositorio: ``` git clone https://github.com/epijorgeperez/bslibdashDM.git ```
 
 2) En tu terminal de R Instala las librerías y paquetes necesarios con ``` renv::restore ```
 
-3) En tu terminal de R cambia tu directorio de trabajo ``` setwd("./shinydashDM") ```
+3) En tu terminal de R cambia tu directorio de trabajo ``` setwd("./bslibdashDM") ```
 
 4) Llama a la librería de shiny:  ``` library(shiny) ```.
 
