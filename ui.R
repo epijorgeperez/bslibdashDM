@@ -5,7 +5,7 @@ source("modules/age_sex_graph.R")
 source("modules/time_chart.R")
 source("modules/map_chart.R")
 source("modules/test_mod.R")
-source("modules/indicadores_table.R")
+#source("modules/indicadores_table.R")
 source("modules/indicadores_cruce.R")
 
 ui <- page_navbar(
@@ -56,23 +56,23 @@ ui <- page_navbar(
       )
     )
   ),
-  nav_panel(
-    title = "Indicadores Médicos",
-    layout_column_wrap(
+  #nav_panel(
+  #  title = "Indicadores Médicos",
+  #  layout_column_wrap(
     #  card(
     #   width = 1/3,
     #    full_screen = TRUE,
     #    card_header("Módulo de Pruebas"),
     #    test_mod_UI("")
     #  ),
-      card(
-        width = 1,
-        full_screen = TRUE,
-        card_header("Indicadores"),
-        indicadores_table_UI("indicadores_table")
-      )
-    )
-  ),
+  #    card(
+  #      width = 1,
+  #      full_screen = TRUE,
+  #      card_header("Indicadores"),
+  #      indicadores_table_UI("indicadores_table")
+   #   )
+  #  )
+  #),
   nav_panel(
     title = "Proceso DM y su impacto",
     layout_column_wrap(

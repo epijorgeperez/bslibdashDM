@@ -23,10 +23,12 @@ load_data <- function(query) {
  #indicadores <- load_data("SELECT * FROM dbo.tb_datos_historico_indicadores")
  incapacidades <- load_data("SELECT * FROM dbo.tb_dm_incap")
  #poblacion <- load_data("SELECT * FROM dbo.tb_poblacion")
-mortalidad <- load_data("SELECT * FROM dbo.MORTA_OOAD")
+mortalidad <- load_data("SELECT * FROM dbo.MORTA_DIABETES")
 incid <- load_data("SELECT * FROM MORBI_DM WHERE cve_delega = 14")
 cuums <- load_data("SELECT * FROM CUUMS_MAESTRO")
 egresos <- load_data("SELECT * FROM dbo.tb_egreso_dm")
+ind_historico <- load_data("SELECT * FROM tb_datos_historico_indicadores")
 #censo <- load_data("SELECT * FROM tb_poblacion")
+
 write_csv(egresos, "data/tb_egreso_dm.csv")
 #write_csv(incidencia, "data/tb_incidencia_dm.csv")

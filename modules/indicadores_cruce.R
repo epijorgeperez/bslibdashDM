@@ -42,7 +42,7 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
     
     # Update the choices for the indicator selections
     observe({
-      indicator_choices <- unique(data_indicadores()$nom_indicador)
+      indicator_choices <- unique(data_indicadores()$desc_indicador)
       updateSelectInput(session, "selected_indicator", choices = indicator_choices)
       updateSelectInput(session, "indicator_x", choices = indicator_choices)
       updateSelectInput(session, "indicator_y", choices = indicator_choices)
@@ -52,7 +52,7 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
     filtered_data <- reactive({
       req(input$selected_indicator)
       data_indicadores() %>%
-        filter(nom_indicador == input$selected_indicator) %>%
+        filter(desc_indicador == input$selected_indicator) %>%
         mutate(
           indicador = as.numeric(indicador),
           anio = as.numeric(anio),
@@ -85,8 +85,8 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
         req(input$indicator_x, input$indicator_y, anio())
         data_indicadores() %>%
             filter(anio == anio(), mes_i == 12) %>%
-            select(nombre_unidad, nom_indicador, indicador) %>%
-            pivot_wider(names_from = nom_indicador, values_from = indicador) %>%
+            select(nombre_unidad, desc_indicador, indicador) %>%
+            pivot_wider(names_from = desc_indicador, values_from = indicador) %>%
             select(nombre_unidad, !!sym(input$indicator_x), !!sym(input$indicator_y)) %>%
             mutate(across(-nombre_unidad, ~as.numeric(.) %>% round(2)))
         })

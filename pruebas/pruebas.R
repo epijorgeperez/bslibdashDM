@@ -150,3 +150,10 @@ v <- LETTERS[1:10]
    )
 
 
+
+
+cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "latin1"))
+data <- read_csv("data/tb_datos_historico_indicadores.csv") 
+
+data <- data %>% left_join(cat_ind, by=join_by(nom_indicador==codigo)) %>% 
+mutate(desc_indicador = paste(nom_indicador, "-", desc_indicador))

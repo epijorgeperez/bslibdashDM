@@ -28,7 +28,7 @@ age_sex_graph_server <- function(id, metrica, data_censo, data_consulta, data_in
 
       # Filter the data based on the user's input
       filtered <- data %>% 
-        filter(Anio == anio(),  Nombre_Unidad == unidad_medica(), Sexo %in% c(1, 2)) #Nombre_OOAD == ooad(), agregar filtro de ooad si es necesario
+        filter(Anio == anio(),  Nombre_Unidad == unidad_medica(), Sexo %in% c(1, 2), Grupo_edad != "Total") #Nombre_OOAD == ooad(), agregar filtro de ooad si es necesario
        
       # To stack by sex, ensure 'Sexo' is a factor with the desired level names
       filtered$Sexo <- factor(filtered$Sexo, levels = c(1, 2), labels = c("Hombre", "Mujer"))

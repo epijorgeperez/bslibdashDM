@@ -3,7 +3,7 @@ source("modules/age_sex_graph.R")
 source("modules/time_chart.R")
 source("modules/map_chart.R")
 source("modules/test_mod.R")
-source("modules/indicadores_table.R")
+#source("modules/indicadores_table.R")
 source("modules/indicadores_cruce.R")
 
 function(input, output, session) {
@@ -34,7 +34,7 @@ function(input, output, session) {
   test_mod_server("test_mod", metrica, totales_anuales, totales_consultas, totales_incap, totales_hosp, 
                   data_censo, data_consulta, data_hosp, data_incapacidad, data_mortalidad)
 
-  indicadores_table_server("indicadores_table", data_indicadores, anio, unidad_medica)
+  #indicadores_table_server("indicadores_table", data_indicadores, anio, unidad_medica)
 
   indicadores_cruce_server("indicadores_cruce", data_indicadores, reactive(input$anio), reactive(input$unidad_medica))
   

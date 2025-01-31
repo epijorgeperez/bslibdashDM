@@ -286,12 +286,15 @@ totales_mortalidad <- reactiveVal({
 data_censo_maestro <- reactiveVal(read_csv("data/cuums_maestro.csv"))
 citiesmx <- reactiveVal(read_csv("data/citiesmx.csv"))
 
+cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "latin1"))
+
 data_indicadores <- reactiveVal({
   data <- read_csv("data/tb_datos_historico_indicadores.csv") %>%
     mutate(nombre_unidad = case_when(
       nombre_unidad %in% c("UMF  168 TEPATITLAN", "UMF 168 TEPATITLAN", "UMF 168 Tepatitlán") ~ "UMF 168 Tepatitlán",
       TRUE ~ nombre_unidad
-    ))
+    )) %>% left_join(cat_ind, by=join_by(nom_indicador==codigo)) %>%
+    mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador))
   data
 })
 
