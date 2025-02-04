@@ -12,107 +12,26 @@ library(tidyr)
     mutate(Cve_Presupuestal = as.character(Cve_Presupuestal))
     names(poblacion_totales) <- tolower(names(poblacion_totales))
 
-# Totales incidencia
-
-#totales_incidencia <- reactiveVal({
-    #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
-    data <- read_csv("data/tb_incidencia_dm.csv")
-    data %>%
-    # Filter for total rows (assuming 'TTotal' in grupos represents total)
-    filter(grupos == "TTotal") %>%
-    # Group by year and cve_presupuestal, sum the cases
-    group_by(anio, cve_presupuestal) %>%
-    summarise(Pacientes_DM = sum(casos, na.rm = TRUE), .groups = "drop") %>%
-    # Join with population totals
-    inner_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
-    # Calculate incidence rate
-    mutate(Dato = Pacientes_DM / totales_poblacion * 100000) %>%
-    # Rename columns
-    rename(Nombre_Unidad = nombre_unidad, Anio = anio)
-
-
-incid_nac <- reactive({
-  # Accessing the reactive 'totales_hosp' from the server environment
-  filtered_in_nac <- totales_incidencia() %>%
-    filter(
-      Anio == anio(),
-      #Nombre_OOAD == ooad(),
-      #Nombre_Unidad == unidad_medica()
-    )
-  filtered_in_nac
-})
-
-
-
-    data <- read_csv("data/tb_incidencia_dm.csv")
-    data <- data %>% 
-      group_by(anio, cve_presupuestal) %>%
-      summarise(Pacientes_DM = sum(no_totales, na.rm = TRUE)) %>%
-      left_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>%
-                mutate(Dato = Pacientes_DM/totales_poblacion*100000)
-#})
-
-
-
-
-
-
-poblacion <- read_csv("data/tb_poblacion.csv")
-poblacion_totales <- poblacion %>%
-    filter(Sexo == 0) %>%
-    group_by(Anio, Cve_Presupuestal, Nombre_Unidad)%>%
-    summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop')
-    names(poblacion_totales) <- tolower(names(poblacion_totales))
-
-
-
-#totales_incidencia <- reactiveVal({
-    #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
-    poblacion <- read_csv("data/tb_poblacion.csv")
-    poblacion_totales <- poblacion %>%
-    filter(Sexo == 0) %>%
-    group_by(Anio, Cve_Presupuestal, Nombre_Unidad)%>%
-    summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop')
-    names(poblacion_totales) <- tolower(names(poblacion_totales))
-
-    data <- read_csv("data/tb_incidencia_dm.csv")
-    data <- data %>% 
-      group_by(anio, cve_presupuestal) %>%
-      summarise(Pacientes_DM = sum(no_totales, na.rm = TRUE)) %>%
-      left_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>%
-                mutate(Dato = Pacientes_DM/totales_poblacion*100000)
-#})
-
-
-# Totales mortalidad
-
-mort<- read_csv("data/tb_morta_dm.csv")
-
-data <- mort %>% 
-      group_by(anio_def, uni_adsc) %>%
-      summarise(count = n(), .groups = 'drop') %>%
-      rename(anio = anio_def, cve_presupuestal = uni_adsc) %>%
-      left_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>%
-                mutate(Dato = count/totales_poblacion*100000)
-
-
-data_m <- read_csv("data/tb_morta_DM.csv") %>%
-    group_by(uni_adsc, cvesex, anio_def, gpoedad) %>%
-    summarise(Casos = n(), .groups = 'drop')%>%
-    mutate(gpoedad = sub("-", " a ", gpoedad)) %>%
-    mutate(gpoedad = ifelse(gpoedad == "85 y +", "85 y mas", gpoedad))%>%
-    mutate(gpoedad = ifelse(nchar(gpoedad) == 6, paste0("0", gpoedad), gpoedad))%>%
-    rename(Anio = anio_def, Sexo = cvesex, Grupo_edad = gpoedad, Cve_Presupuestal = uni_adsc)%>%
-    full_join(poblacion_gpoedad, by = c("Cve_Presupuestal", "Sexo", "Anio", "Grupo_edad")) %>%
-    mutate(Casos = ifelse(is.na(Casos), 0, Casos)) %>%
-    mutate(Dato = Casos/Totales_Poblacion * 100000) 
-
 poblacion_gpoedad <- poblacion %>%
-    filter(Sexo != 0, Grupo_edad != "NI") %>%
+    filter(Sexo != 0, Grupo_edad != "NI", Parametro == "PAMF") %>%
     group_by(Anio, Cve_Presupuestal, Nombre_Unidad, Sexo, Grupo_edad)%>%
     summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop')
 
 # Totales incidencia
+
+#totales_incidencia <- reactiveVal({
+    #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
+    data_i <- read_csv("data/tb_incidencia_dm.csv")
+    data_i %>%
+      filter(Grupo_edad == "TTotal", Sexo == 0) %>%
+      rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%
+      group_by(anio, cve_presupuestal) %>%
+    summarise(Pacientes_DM = sum(Dato, na.rm = TRUE), .groups = "drop") %>%
+    inner_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
+    mutate(Dato = Pacientes_DM / totales_poblacion * 100000) %>%
+    rename(Nombre_Unidad = nombre_unidad, Anio = anio)
+
+# Incidencia por sexo y edad
 
 poblacion_gpoedad_incid <- poblacion_gpoedad %>%
     mutate(Grupo_edad = case_when(
@@ -124,24 +43,84 @@ poblacion_gpoedad_incid <- poblacion_gpoedad %>%
     summarise(Totales_Poblacion = sum(Totales_Poblacion, na.rm = TRUE), .groups = 'drop')
 names(poblacion_gpoedad_incid)<- tolower(names(poblacion_gpoedad_incid))
 
-data <- read_csv("data/tb_incidencia_dm.csv") %>%
-    select(c(1,2,12:36))%>%
-    group_by(cve_presupuestal, anio) %>%
-    summarise_all(sum)%>%
-    mutate(de00_a_04 = menores_1 + de01_a_04, 
-            de00_a_04f = menores_1f + de01_a_04f)%>%
-    select(1,2,28,3:14, 29, 15:27) %>%
-    select(-c("menores_1", "menores_1f", "de01_a_04", "de01_a_04f", "se_ignoran", "se_ignoraf", "no_totales")) %>%
-    pivot_longer(cols = 3:last_col(), names_to = "gpoedadsexo", values_to = "casos")%>%
-    mutate(sexo = ifelse(grepl("f$", gpoedadsexo), 2, 1)) %>%
-    mutate(grupo_edad = sub("de([0-9]+)_a_([0-9]+)", "\\1 a \\2", gpoedadsexo))%>%
-    mutate(grupo_edad = sub("f$", "", grupo_edad))%>%
-    mutate(grupo_edad = ifelse(grepl("de65", grupo_edad), "65 y mas", grupo_edad)) %>%
-    select(1,2,6,5,4)%>%
+incid_sexo_edad <- data_i  %>%
+    filter(Sexo != 0, !Grupo_edad %in% c("TTotal", "seignora")) %>%
+    mutate(Cve_Presupuestal = case_when(
+      Nombre_OOAD == "Nacional" ~ "00",
+      Nombre_OOAD == "Jalisco" & is.na(Cve_Presupuestal) ~ "14",
+      TRUE ~ Cve_Presupuestal
+    )) %>%
+    mutate(Grupo_edad = case_when(
+      Grupo_edad %in% c("men1", "de01_a_04") ~ "00 a 04",
+      TRUE ~ Grupo_edad
+    )) %>%
+    group_by(Cve_Presupuestal, Anio, Sexo, Grupo_edad) %>%
+    summarise(Casos = sum(Dato), .groups = 'drop')%>%
+    mutate(Grupo_edad = ifelse(grepl("de65", Grupo_edad), "65 y mas", Grupo_edad)) %>%
+    mutate(Grupo_edad = gsub("de(\\d+)_a_(\\d+)", "\\1 a \\2", Grupo_edad)) %>%
+    rename_with(tolower)%>%
     full_join(poblacion_gpoedad_incid, by = c("cve_presupuestal", "sexo", "anio", "grupo_edad")) %>%
-    mutate(Dato = casos/totales_poblacion*100000) %>%
+    mutate(Dato = casos/totales_poblacion*100000)%>%
     rename(Anio = anio, Nombre_Unidad = nombre_unidad, Sexo = sexo, Grupo_edad = grupo_edad)
 
+
+filtered  <- incid_sexo_edad  %>% 
+        filter(Anio == 2023,  Nombre_Unidad == "UMF 34 Guadalajara", Sexo %in% c(1, 2), Grupo_edad != "Total") #Nombre_OOAD == ooad(), agregar filtro de ooad si es necesario
+       
+      # To stack by sex, ensure 'Sexo' is a factor with the desired level names
+      filtered$Sexo <- factor(filtered$Sexo, levels = c(1, 2), labels = c("Hombre", "Mujer"))
+  
+      # Group and summarise data
+      data_grouped <- filtered %>%
+        group_by(Grupo_edad, Sexo) %>%
+        summarise(Casos = sum(casos, na.rm = TRUE), .groups = 'drop')
+
+      # Create the echarts4r graph with stacked bars
+      data_grouped %>%
+        pivot_wider(names_from = Sexo, values_from = Casos) %>%
+        #mutate(total = Hombre + Mujer) %>%
+        e_charts(Grupo_edad)%>%
+        e_bar(Mujer, stack = "grp", itemStyle = list(color = "pink")) %>%
+        e_bar(Hombre, stack = "grp", itemStyle = list(color = "#3838a3"))%>%
+        e_axis_labels(x = "Grupos de edad") |> # axis labels
+       # e_title("Casos de Diabetes por sexo y edad") |>  # Add title & subtitle
+        e_theme("infographic") |>  # theme
+        e_legend(right = 0) |>  # move legend to the bottom
+        e_tooltip(trigger = "axis") # tooltip
+
+
+
+# Totales mortalidad
+
+mort <- read_csv("data/tb_morta_dm.csv")
+
+data <- mort %>% 
+      filter(Grupo_edad == "Total", Sexo == 0) %>%
+      rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%
+      group_by(anio, cve_presupuestal) %>%
+      summarise(count = sum(Dato), .groups = 'drop') %>%
+      #rename(anio = anio_def, cve_presupuestal = uni_adsc) %>%
+      left_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>%
+                mutate(Dato = count/totales_poblacion*100000)
+
+# Mortalidad por edad y sexo
+poblacion_gpoedad <- poblacion %>%
+    filter(Sexo != 0, Grupo_edad != "NI") %>%
+    group_by(Anio, Cve_Presupuestal, Nombre_Unidad, Sexo, Grupo_edad)%>%
+    summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop')
+
+data_m <- mort %>%
+    filter(Sexo != 0, Grupo_edad != "Total") %>%
+    group_by(Cve_Presupuestal, Sexo, Anio, Grupo_edad) %>%
+    summarise(Casos = sum(Dato), .groups = 'drop')%>%
+    full_join(poblacion_gpoedad, by = c("Cve_Presupuestal", "Sexo", "Anio", "Grupo_edad")) %>%
+    mutate(Casos = ifelse(is.na(Casos), 0, Casos)) %>%
+    mutate(Dato = Casos/Totales_Poblacion * 100000) 
+
+
+
+
+## RANDOM
       data %>%
         filter(anio == 2014) %>%
         group_by(grupo_edad, sexo) %>%

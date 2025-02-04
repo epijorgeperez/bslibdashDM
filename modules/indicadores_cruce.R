@@ -52,7 +52,8 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
     filtered_data <- reactive({
       req(input$selected_indicator)
       data_indicadores() %>%
-        filter(desc_indicador == input$selected_indicator) %>%
+        filter(desc_indicador == input$selected_indicator, 
+        nombre_unidad %in% c("Nacional", "Jalisco", unidad_medica())) %>%
         mutate(
           indicador = as.numeric(indicador),
           anio = as.numeric(anio),
@@ -84,7 +85,7 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
     correlation_data <- reactive({
         req(input$indicator_x, input$indicator_y, anio())
         data_indicadores() %>%
-            filter(anio == anio(), mes_i == 12) %>%
+            filter(anio == anio(), mes_i == 12, nombre_unidad %in% c("Nacional", "Jalisco", unidad_medica())) %>%
             select(nombre_unidad, desc_indicador, indicador) %>%
             pivot_wider(names_from = desc_indicador, values_from = indicador) %>%
             select(nombre_unidad, !!sym(input$indicator_x), !!sym(input$indicator_y)) %>%

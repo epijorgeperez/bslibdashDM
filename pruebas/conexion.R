@@ -17,18 +17,31 @@ load_data <- function(query) {
 }
 
 
-# Example of loading specific tables
- pob <- load_data("SELECT * FROM tb_poblacion")
- #consultas <- load_data("SELECT * FROM tb_consulta_dm")
- #indicadores <- load_data("SELECT * FROM dbo.tb_datos_historico_indicadores")
- incapacidades <- load_data("SELECT * FROM dbo.tb_dm_incap")
- #poblacion <- load_data("SELECT * FROM dbo.tb_poblacion")
-mortalidad <- load_data("SELECT * FROM dbo.MORTA_DIABETES")
-incid <- load_data("SELECT * FROM MORBI_DM WHERE cve_delega = 14")
-cuums <- load_data("SELECT * FROM CUUMS_MAESTRO")
-egresos <- load_data("SELECT * FROM dbo.tb_egreso_dm")
-ind_historico <- load_data("SELECT * FROM tb_datos_historico_indicadores")
-#censo <- load_data("SELECT * FROM tb_poblacion")
+# Descargar datos
 
+mortalidad <- load_data("SELECT * FROM dbo.MORTA_DIABETES")
+write_csv(mortalidad, "data/tb_morta_dm.csv")
+
+incid <- load_data("SELECT * FROM MORBI_DIABETES")
+write_csv(incidencia, "data/tb_incidencia_dm.csv")
+
+ind_historico <- load_data("SELECT * FROM tb_datos_historico_indicadores")
+write_csv(ind_historico, "data/tb_datos_historico_indicadores.csv")
+
+cuums <- load_data("SELECT * FROM CUUMS_MAESTRO")
+write_csv(cuums, "data/cuums_maestro.csv")
+
+pob <- load_data("SELECT * FROM tb_poblacion")
+write_csv(pob, "data/tb_poblacion.csv")
+
+consultas <- load_data("SELECT * FROM tb_consulta_dm")
+write_csv(consultas, "data/tb_consulta_dm.csv")
+
+egresos <- load_data("SELECT * FROM dbo.tb_egreso_dm")
 write_csv(egresos, "data/tb_egreso_dm.csv")
-#write_csv(incidencia, "data/tb_incidencia_dm.csv")
+
+censo_prev <- load_data("SELECT * FROM dbo.tb_censo_DM")
+write_csv(censo_prev, "data/tb_censo_DM.csv")
+
+incapacidades <- load_data("SELECT * FROM dbo.tb_dm_incap")
+write_csv(incapacidades, "data/tb_dm_incap.csv")

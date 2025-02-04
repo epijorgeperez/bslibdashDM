@@ -157,7 +157,7 @@ incid_nac <- reactive({
     filter(
       Anio == anio(),
       #Nombre_OOAD == ooad(),
-      Nombre_Unidad == unidad_medica()
+      Nombre_Unidad == 'Nacional'
     )
   filtered_in_nac
 })
@@ -212,7 +212,7 @@ filtered_mort <- reactive({
     filter(
       Anio == anio(),
       #Nombre_OOAD == ooad(),
-      Nombre_Unidad == unidad_medica()#DUMMY CORREGIR UNA VEZ QUE SE TRABAJEN AGREGADOS POR OOAD Y NACIONAL
+      Nombre_Unidad == unidad_medica()
     )
   filtered_m
 })
@@ -222,7 +222,7 @@ mort_nac <- reactive({
     filter(
       Anio == anio(),
       #Nombre_OOAD == ooad(),
-      Nombre_Unidad == unidad_medica()#DUMMY CORREGIR UNA VEZ QUE SE TRABAJEN AGREGADOS POR OOAD Y NACIONAL
+      Nombre_Unidad == "Nacional"
     )
   filtered_m
 })
@@ -277,16 +277,12 @@ filtered_dias_est_ooad <- reactive({
     )
 })
 
-#PARA INICIDENCIA Y MORTALIDAD ES NECESARIO AGREGAR EL ACUMULADO POR OOAD Y NACIONAL EN 
-#GLOBAL.R AL TRANSFORMAR LA BASE DE DATOS YA QUE NO VIENEN ESAS CATEGORÍAS COMO EN EL RESTO
-#DE LAS BASES DE DATOS 
-
 filtered_incid_ooad <- reactive({
   totales_incidencia() %>%
     filter(
       Anio == anio(),
       #Nombre_OOAD == ooad(),
-      Nombre_Unidad == unidad_medica() #DUMMY CORREGIR UNA VEZ QUE SE TRABAJEN AGREGADOS POR OOAD Y NACIONAL
+      Nombre_Unidad == "Jalisco" 
     )
 })
 
@@ -295,7 +291,7 @@ filtered_mort_ooad <- reactive({
     filter(
       Anio == anio(),
       #Nombre_OOAD == ooad(),
-      Nombre_Unidad == unidad_medica()#DUMMY CORREGIR UNA VEZ QUE SE TRABAJEN AGREGADOS POR OOAD Y NACIONAL
+      Nombre_Unidad == "Jalisco" 
     )
 })
 

@@ -29,7 +29,7 @@ function(input, output, session) {
                        data_mortalidad, data_incidencia, anio, ooad, unidad_medica)
 
   map_chart_server("map", metrica, totales_anuales, totales_consultas, totales_incap, totales_hosp, 
-                   totales_mortalidad, totales_incidencia, citiesmx, data_censo_maestro, anio)
+                   totales_mortalidad, totales_incidencia, citiesmx, data_censo_maestro, jalisco_shape, anio)
 
   test_mod_server("test_mod", metrica, totales_anuales, totales_consultas, totales_incap, totales_hosp, 
                   data_censo, data_consulta, data_hosp, data_incapacidad, data_mortalidad)

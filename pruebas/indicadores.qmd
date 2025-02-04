@@ -35,6 +35,55 @@ data <- indicadores %>%
     arrange(Mes)
 ```
 
+```{r}
+selected_year <- 2017
+selected_type <- "Unidad"
+selected_indicator <- 1
+selected_unidad <- "UMF 168 Tepatitlán"
+
+
+cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "latin1"))
+cuums <- read_csv("data/cuums_maestro.csv")
+data <- read_csv("data/tb_datos_historico_indicadores.csv") %>%
+    select(-nombre_unidad)%>%
+    left_join(select(cuums, ClavePresupuestal, DenominacionUnidad), by=c("clave" = "ClavePresupuestal"))%>% 
+    left_join(cat_ind, by=join_by(nom_indicador==codigo)) %>%
+    mutate(nombre_unidad = case_when(
+      clave == "00" ~ "Nacional",
+      clave == "14" ~ "Jalisco",
+      TRUE ~ DenominacionUnidad
+    )) %>%
+    mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador))
+
+    filtered_data <- data %>%
+        filter(digito_equivalencia == selected_indicator, nombre_unidad %in% c("Nacional", "Jalisco", selected_unidad)) %>%
+        mutate(
+          indicador = as.numeric(indicador),
+          anio = as.numeric(anio),
+          mes_i = as.numeric(mes_i),
+          date = make_date(anio, mes_i, 1)
+        ) %>%
+        arrange(nombre_unidad, date)
+
+    
+    # Create the time series plot
+    output$time_series_plot <- renderPlot({
+      req(filtered_data())
+      
+      ggplot(filtered_data, aes(x = date, y = indicador, color = nombre_unidad, group = nombre_unidad)) +
+        geom_line() +
+        geom_point() +
+        theme_minimal() +
+        labs(title = paste("Evolución del indicador:", selected_indicator),
+             x = "Fecha",
+             y = "Valor del Indicador",
+             color = "Unidad Médica") +
+        theme(legend.position = "bottom",
+              plot.title = element_text(hjust = 0.5, face = "bold")) +
+        scale_x_date(date_breaks = "1 year", date_labels = "%Y-%m") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    })
+```
 
 ```{r}
 data %>%
