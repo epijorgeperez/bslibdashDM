@@ -15,6 +15,9 @@ library(htmlwidgets)
 time_chart_server <- function(id, metrica, totales_anuales, totales_consultas, totales_incap, totales_hosp, totales_mortalidad, totales_incidencia, ooad, unidad_medica) {
   moduleServer(id, function(input, output, session) {
     output$time_chart <- renderDygraph({
+      # Validate that required inputs are available
+      req(metrica(), unidad_medica())
+      
       # Get the corresponding data based on the selected metric
       data <- switch(metrica(),
                      "Prevalencia" = totales_anuales(),
@@ -23,6 +26,8 @@ time_chart_server <- function(id, metrica, totales_anuales, totales_consultas, t
                      "Hospitalizaciones" = totales_hosp(),
                      "Mortalidad" = totales_mortalidad(),
                      "Incidencia" = totales_incidencia())
+      
+      req(data) # Ensure data is available
 
       # Filter the data based on the user's input
       filtered <- data %>%

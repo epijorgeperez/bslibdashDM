@@ -1,8 +1,5 @@
 # modules/indicadores_cruce.R
 
-library(dplyr)
-library(ggplot2)
-library(lubridate)
 
 indicadores_cruce_UI <- function(id) {
   ns <- NS(id)
@@ -11,7 +8,7 @@ indicadores_cruce_UI <- function(id) {
       column(12,
         selectInput(ns("selected_indicator"), "Seleccionar Indicador",
                     choices = NULL, selected = NULL),
-        plotOutput(ns("time_series_plot"), height = "500px")
+        dygraphOutput(ns("time_series_plot"), height = "500px")
       )
     ),
     fluidRow(
@@ -24,14 +21,7 @@ indicadores_cruce_UI <- function(id) {
     ),
     fluidRow(
       column(12,
-        plotOutput(ns("correlation_plot"), height = "500px")
-      )
-    ),
-    # Add this new section to display the filtered data
-    fluidRow(
-      column(12,
-        h4("Filtered Data for Correlation Plot:"),
-        verbatimTextOutput(ns("debug_data"))
+        plotlyOutput(ns("correlation_plot"), height = "700px")
       )
     )
   )
@@ -45,87 +35,141 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
       indicator_choices <- unique(data_indicadores()$desc_indicador)
       updateSelectInput(session, "selected_indicator", choices = indicator_choices)
       updateSelectInput(session, "indicator_x", choices = indicator_choices)
-      updateSelectInput(session, "indicator_y", choices = indicator_choices)
+      updateSelectInput(session, "indicator_y", choices = indicator_choices,selected = indicator_choices[2])
     })
     
-    # Filter and prepare data for the time series plot
+    # Modified filtered_data to prepare for dygraph
     filtered_data <- reactive({
       req(input$selected_indicator)
       data_indicadores() %>%
-        filter(desc_indicador == input$selected_indicator, 
-        nombre_unidad %in% c("Nacional", "Jalisco", unidad_medica())) %>%
+        filter(desc_indicador == input$selected_indicator,
+               nombre_unidad %in% c("Nacional", "Jalisco", unidad_medica())) %>%
         mutate(
           indicador = as.numeric(indicador),
           anio = as.numeric(anio),
           mes_i = as.numeric(mes_i),
           date = make_date(anio, mes_i, 1)
         ) %>%
-        arrange(nombre_unidad, date)
+        arrange(date) %>%
+        select(date, nombre_unidad, indicador) %>%
+        pivot_wider(names_from = nombre_unidad, 
+                   values_from = indicador)
     })
     
-    # Create the time series plot
-    output$time_series_plot <- renderPlot({
+    # Replace the ggplot with dygraph
+    output$time_series_plot <- renderDygraph({
       req(filtered_data())
       
-      ggplot(filtered_data(), aes(x = date, y = indicador, color = nombre_unidad, group = nombre_unidad)) +
-        geom_line() +
-        geom_point() +
-        theme_minimal() +
-        labs(title = paste("Evolución del indicador:", input$selected_indicator),
-             x = "Fecha",
-             y = "Valor del Indicador",
-             color = "Unidad Médica") +
-        theme(legend.position = "bottom",
-              plot.title = element_text(hjust = 0.5, face = "bold")) +
-        scale_x_date(date_breaks = "1 year", date_labels = "%Y-%m") +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      # Custom date formatter
+      formatDate <- JS("function(d) {
+        var months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+                     'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        return months[d.getMonth()] + ' ' + d.getFullYear();
+      }")
+
+      # Calculate y-axis range for padding
+      all_values <- as.matrix(filtered_data()[,-1])
+      y_range <- range(all_values, na.rm = TRUE)
+      y_padding <- diff(y_range) * 0.1
+
+      dygraph(filtered_data(), xlab = "Fecha", ylab = input$selected_indicator) %>%
+        dyOptions(
+          fillGraph = TRUE,
+          fillAlpha = 0.1,
+          drawGrid = FALSE,
+          colors = c("steelblue", "darkred", "darkgreen")
+        ) %>%
+        dyAxis("y", 
+               label = input$selected_indicator,
+               valueRange = c(y_range[1] - y_padding, y_range[2] + y_padding)) %>%
+        dyAxis("x", 
+               label = "Fecha",
+               axisLabelFormatter = formatDate) %>%
+        dyHighlight(
+          highlightCircleSize = 5,
+          highlightSeriesBackgroundAlpha = 0.5,
+          hideOnMouseOut = FALSE
+        ) %>%
+        dyLegend(show = "follow", 
+                 hideOnMouseOut = FALSE, labelsSeparateLines = TRUE)
     })
+
     
     # Filter and prepare data for the correlation plot
     correlation_data <- reactive({
         req(input$indicator_x, input$indicator_y, anio())
         data_indicadores() %>%
-            filter(anio == anio(), mes_i == 12, nombre_unidad %in% c("Nacional", "Jalisco", unidad_medica())) %>%
+            filter(anio == anio(), mes_i == 12) %>%
             select(nombre_unidad, desc_indicador, indicador) %>%
-            pivot_wider(names_from = desc_indicador, values_from = indicador) %>%
-            select(nombre_unidad, !!sym(input$indicator_x), !!sym(input$indicator_y)) %>%
+            pivot_wider(
+              names_from = desc_indicador, 
+              values_from = indicador,
+              names_repair = "unique_quiet"
+            ) %>%
+            select(nombre_unidad, all_of(c(input$indicator_x, input$indicator_y))) %>%
             mutate(across(-nombre_unidad, ~as.numeric(.) %>% round(2)))
-        })
-
-    
-    # Output the selected anio, indicator x, and y, and top 5 rows of correlation_data for debugging
-    output$debug_data <- renderPrint({
-        req(anio(), input$indicator_x, input$indicator_y, correlation_data())
-        print(paste("Año:", anio(), "- Diciembre"))
-        print(paste("Indicador X:", input$indicator_x, "Indicador Y:", input$indicator_y))
-        print("Filtered and transformed data:")
-        print(correlation_data())
     })
-    
+
     # Create the correlation plot
-    output$correlation_plot <- renderPlot({
-  req(correlation_data())
-  
-  if(nrow(correlation_data()) == 0 || 
-     is.null(correlation_data()[[input$indicator_x]]) || 
-     is.null(correlation_data()[[input$indicator_y]])) {
-    return(ggplot() + 
-             annotate("text", x = 0.5, y = 0.5, label = "No data available for the selected indicators") +
-             theme_void())
-  }
-  
-  ggplot(correlation_data(), aes(x = !!sym(input$indicator_x), y = !!sym(input$indicator_y))) +
-    geom_point(aes(color = nombre_unidad), size = 3) +
-    geom_smooth(method = "lm", se = FALSE, color = "red", linetype = "dashed") +
-    theme_minimal() +
-    labs(title = paste("Correlación entre", input$indicator_x, "y", input$indicator_y),
-         subtitle = paste("Año:", anio(), "- Diciembre"),
-         x = input$indicator_x,
-         y = input$indicator_y,
-         color = "Unidad Médica") +
-    theme(legend.position = "bottom",
-          plot.title = element_text(hjust = 0.5, face = "bold"),
-          plot.subtitle = element_text(hjust = 0.5))
-})
+    output$correlation_plot <- renderPlotly({
+      req(correlation_data(), input$indicator_x, input$indicator_y)
+      
+      # Calculate means for quadrant lines
+      x_mean <- mean(correlation_data()[[input$indicator_x]], na.rm = TRUE)
+      y_mean <- mean(correlation_data()[[input$indicator_y]], na.rm = TRUE)
+      
+      # Create color values vector dynamically
+      color_values <- c("steelblue", "darkred", "darkgreen")
+      names(color_values) <- c("Nacional", "Jalisco", unidad_medica())
+      
+      # Create the base ggplot
+      p <- ggplot(correlation_data(), 
+                  aes(x = .data[[input$indicator_x]], 
+                      y = .data[[input$indicator_y]],
+                      text = paste0("Unidad: ", nombre_unidad,
+                                  "\n", input$indicator_x, ": ", 
+                                  round(.data[[input$indicator_x]], 2),
+                                  "\n", input$indicator_y, ": ", 
+                                  round(.data[[input$indicator_y]], 2)))) +
+        # Add quadrant lines
+        geom_vline(xintercept = x_mean, linetype = "dashed", color = "gray") +
+        geom_hline(yintercept = y_mean, linetype = "dashed", color = "gray") +
+        # Add regular points
+        geom_point(data = . %>% filter(!nombre_unidad %in% c(unidad_medica(), "Nacional", "Jalisco")),
+                  size = 1.5, alpha = 0.6, color = "gray70") +
+        # Add highlighted points
+        geom_point(data = . %>% filter(nombre_unidad %in% c(unidad_medica(), "Nacional", "Jalisco")),
+                  aes(color = nombre_unidad), size = 3) +
+        # Add labels for highlighted points
+        geom_text_repel(data = . %>% filter(nombre_unidad %in% c(unidad_medica(), "Nacional", "Jalisco")),
+                       aes(label = nombre_unidad, color = nombre_unidad), 
+                       size = 4, show.legend = FALSE) +
+        # Custom colors
+        scale_color_manual(values = color_values) +
+        # Add quadrant labels
+        annotate("text", x = max(correlation_data()[[input$indicator_x]], na.rm = TRUE), 
+                y = max(correlation_data()[[input$indicator_y]], na.rm = TRUE), 
+                label = "Alto-Alto", hjust = 1, vjust = 1) +
+        annotate("text", x = min(correlation_data()[[input$indicator_x]], na.rm = TRUE), 
+                y = max(correlation_data()[[input$indicator_y]], na.rm = TRUE), 
+                label = "Bajo-Alto", hjust = 0, vjust = 1) +
+        annotate("text", x = max(correlation_data()[[input$indicator_x]], na.rm = TRUE), 
+                y = min(correlation_data()[[input$indicator_y]], na.rm = TRUE), 
+                label = "Alto-Bajo", hjust = 1, vjust = 0) +
+        annotate("text", x = min(correlation_data()[[input$indicator_x]], na.rm = TRUE), 
+                y = min(correlation_data()[[input$indicator_y]], na.rm = TRUE), 
+                label = "Bajo-Bajo", hjust = 0, vjust = 0) +
+        # Customize theme
+        theme_minimal() +
+        labs(
+          title = paste("Análisis de cuadrante:", anio(), "- Diciembre"),
+          x = input$indicator_x,
+          y = input$indicator_y,
+          color = "Unidad"
+        )
+
+      # Convert to interactive plot
+      ggplotly(p, tooltip = "text")
+    })
   })
 }

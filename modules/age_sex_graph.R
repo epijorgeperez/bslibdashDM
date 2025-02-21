@@ -8,23 +8,19 @@ age_sex_graph_UI <- function(id) {
 age_sex_graph_server <- function(id, metrica, data_censo, data_consulta, data_incapacidad, data_hosp, data_mortalidad, data_incidencia, anio, ooad, unidad_medica) {
   moduleServer(id, function(input, output, session) {
     output$age_sex_graph <- renderEcharts4r({
-      # Initialize data as NULL
-      data <- NULL
-
+      req(metrica(), anio(), unidad_medica())
+      
       # Get the corresponding data based on the selected metric
-      if (metrica() == "Prevalencia") {
-        data <- data_censo()
-      } else if (metrica() == "Consultas") {
-        data <- data_consulta()
-      } else if (metrica() == "Incapacidades") {
-        data <- data_incapacidad()
-      } else if (metrica() == "Hospitalizaciones") {
-        data <- data_hosp()
-      } else if (metrica() == "Mortalidad") {
-        data <- data_mortalidad()
-      } else if (metrica() == "Incidencia") {
-        data <- data_incidencia()
-      }
+      data <- switch(metrica(),
+        "Prevalencia" = data_censo(),
+        "Consultas" = data_consulta(),
+        "Incapacidades" = data_incapacidad(),
+        "Hospitalizaciones" = data_hosp(),
+        "Mortalidad" = data_mortalidad(),
+        "Incidencia" = data_incidencia()
+      )
+      
+      req(data)
 
       # Filter the data based on the user's input
       filtered <- data %>% 

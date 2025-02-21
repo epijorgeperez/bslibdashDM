@@ -19,6 +19,8 @@ map_chart_server <- function(id, metrica, totales_anuales, totales_consultas, to
     
     # Reactive data based on the selected metric
     data <- reactive({
+      req(metrica(), anio(), data_censo_maestro(), citiesmx())
+      
       # Get base data based on the selected metric
       base_data <- switch(metrica(),
         "Prevalencia" = totales_anuales(),
@@ -28,6 +30,8 @@ map_chart_server <- function(id, metrica, totales_anuales, totales_consultas, to
         "Mortalidad" = totales_mortalidad(),
         "Incidencia" = totales_incidencia()
       )
+      
+      req(base_data)
       
       # Join with location data
       base_data %>%

@@ -16,6 +16,8 @@ library(gt)
 library(stringr)
 library(leaflet.extras)
 library(sf)
+library(plotly)
+library(ggrepel)
 
 # Connection string to establish a connection to the SQL Server database
 #connection_details <- dbConnect(odbc::odbc(), 
@@ -293,11 +295,12 @@ municipalities <- st_read("data/mun21gw/mun21gw.shp")
 jalisco_shape <- municipalities %>%
   filter(NOM_ENT == "Jalisco")
 
-cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "latin1"))
+cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "utf-8"))
 
 data_indicadores <- reactiveVal({
   data <- read_csv("data/tb_datos_historico_indicadores.csv") %>%
     select(-nombre_unidad)%>%
+    filter(digito_equivalencia %in% c(558, 470, 5, 1, 8, 9, 7, 3, 6)) %>%
     left_join(select(cuums, ClavePresupuestal, DenominacionUnidad), by=c("clave" = "ClavePresupuestal"))%>% 
     left_join(cat_ind, by=join_by(nom_indicador==codigo)) %>%
     mutate(nombre_unidad = case_when(
