@@ -12,9 +12,6 @@ y aquí -> https://github.com/epijorgeperez/bslibdashDM/blob/main/Documentos.md
 
 ### Tablero Shiny
 
-![image](https://github.com/user-attachments/assets/fe8156da-2ddc-4f28-83f6-89c543f5394e)
-
-
 Para correr el dashboard localmente: 
 
 1) Abre tu terminal (powershell, bash) y clona el repositorio: ``` git clone https://github.com/epijorgeperez/bslibdashDM.git ```
