@@ -9,7 +9,11 @@ y aquí -> https://github.com/epijorgeperez/bslibdashDM/blob/main/Documentos.md
 
 ![image](https://github.com/epijorgeperez/CIIMSS-Diabetes/assets/69016243/1e7423ab-381c-4459-9251-6277045d8701)
 
+
 ### Tablero Shiny
+
+![image](https://github.com/user-attachments/assets/fe8156da-2ddc-4f28-83f6-89c543f5394e)
+
 
 Para correr el dashboard localmente: 
 
