@@ -15,11 +15,15 @@ Para correr el dashboard localmente:
 
 1) Abre tu terminal (powershell, bash) y clona el repositorio: ``` git clone https://github.com/epijorgeperez/bslibdashDM.git ```
 
-2) En tu terminal de R Instala las librerías y paquetes necesarios con ``` renv::restore ```
+2) **Importante:** Descarga el archivo de shapefile de municipios de México desde: http://www.conabio.gob.mx/informacion/gis/maps/geo/mun21gw.zip 
+   - Descomprime el archivo ZIP
+   - Coloca el archivo mun21gw.shp en la carpeta `data/mun21gw/` de tu proyecto
 
-3) En tu terminal de R cambia tu directorio de trabajo ``` setwd("./bslibdashDM") ```
+3) En tu terminal de R Instala las librerías y paquetes necesarios con ``` renv::restore ```
 
-4) Llama a la librería de shiny:  ``` library(shiny) ```.
+4) En tu terminal de R cambia tu directorio de trabajo ``` setwd("./bslibdashDM") ```
 
-5) Corre la app: ``` runApp() ```
+5) Llama a la librería de shiny:  ``` library(shiny) ```.
+
+6) Corre la app: ``` runApp() ```
 

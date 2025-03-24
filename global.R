@@ -410,32 +410,22 @@ citiesmx <- reactiveVal(read_csv("data/citiesmx.csv"))
 
 # Define the file path and Google Drive link
 shapefile_path <- "data/mun21gw/mun21gw.shp"
-google_drive_link <- "https://drive.google.com/uc?id=19XkZQhL3emHXcOjzkuQlMIfSU1iQUgQu"
 
-# Check if the shapefile exists
-if (!file.exists(shapefile_path)) {
-  # Notify the user that the file is being downloaded
-  message("Shapefile not found. Downloading from Google Drive...")
+# Load municipalities shapefile with error handling
+tryCatch({
+  municipalities <- st_read(shapefile_path, quiet = TRUE)
+  jalisco_shape <- municipalities %>%
+    filter(NOM_ENT == "Jalisco")
+}, error = function(e) {
+  # Provide a helpful error message if the shapefile is missing
+  message("Error loading shapefile: ", e$message)
+  message("Please download the shapefile from: http://www.conabio.gob.mx/informacion/gis/maps/geo/mun21gw.zip")
+  message("Extract the files and place them in the data/mun21gw/ folder")
   
-  # Create the directory if it doesn't exist
-  dir.create("data/mun21gw", recursive = TRUE, showWarnings = FALSE)
-  
-  # Download the file from Google Drive
-  download.file(google_drive_link, destfile = "data/mun21gw/mun21gw.zip", mode = "wb")
-  
-  # Unzip the downloaded file
-  unzip("data/mun21gw/mun21gw.zip", exdir = "data/mun21gw")
-  
-  # Remove the zip file after extraction
-  file.remove("data/mun21gw/mun21gw.zip")
-  
-  message("Shapefile downloaded and extracted successfully.")
-}
-
-# Read the shapefile
-municipalities <- st_read(shapefile_path)
-jalisco_shape <- municipalities %>%
-  filter(NOM_ENT == "Jalisco")
+  # Create empty sf objects as placeholders
+  municipalities <- st_sf(data.frame(NOM_ENT = character(0), geometry = st_sfc()))
+  jalisco_shape <- st_sf(data.frame(NOM_ENT = character(0), geometry = st_sfc()))
+})
 
 cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "utf-8"))
 
