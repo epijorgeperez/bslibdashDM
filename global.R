@@ -407,7 +407,33 @@ data_censo_maestro <- reactiveVal({
 
 # These files need to be loaded from files as specified
 citiesmx <- reactiveVal(read_csv("data/citiesmx.csv"))
-municipalities <- st_read("data/mun21gw/mun21gw.shp")
+
+# Define the file path and Google Drive link
+shapefile_path <- "data/mun21gw/mun21gw.shp"
+google_drive_link <- "https://drive.google.com/uc?id=19XkZQhL3emHXcOjzkuQlMIfSU1iQUgQu"
+
+# Check if the shapefile exists
+if (!file.exists(shapefile_path)) {
+  # Notify the user that the file is being downloaded
+  message("Shapefile not found. Downloading from Google Drive...")
+  
+  # Create the directory if it doesn't exist
+  dir.create("data/mun21gw", recursive = TRUE, showWarnings = FALSE)
+  
+  # Download the file from Google Drive
+  download.file(google_drive_link, destfile = "data/mun21gw/mun21gw.zip", mode = "wb")
+  
+  # Unzip the downloaded file
+  unzip("data/mun21gw/mun21gw.zip", exdir = "data/mun21gw")
+  
+  # Remove the zip file after extraction
+  file.remove("data/mun21gw/mun21gw.zip")
+  
+  message("Shapefile downloaded and extracted successfully.")
+}
+
+# Read the shapefile
+municipalities <- st_read(shapefile_path)
 jalisco_shape <- municipalities %>%
   filter(NOM_ENT == "Jalisco")
 
