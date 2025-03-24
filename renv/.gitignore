@@ -6,3 +6,16 @@ python/
 sandbox/
 staging/
 data/tb_egreso_dm.csv
+data/tb_consulta_dm.csv
+data/tb_censo_DM.csv
+data/tb_dm_incap.csv
+data/cuums_maestro.csv
+data/tb_poblacion.csv
+data/tb_incidencia_dm.csv
+data/tb_dm_incap.csv
+data/tb_egreso_dm.csv
+data/tb_consulta_dm.csv
+data/tb_censo_DM.csv
+data/tb_dm_incap.csv
+data/cuums_maestro.csv
+data/mun21gw/*
