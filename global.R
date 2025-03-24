@@ -20,36 +20,65 @@ library(plotly)
 library(ggrepel)
 
 # Connection string to establish a connection to the SQL Server database
-#connection_details <- dbConnect(odbc::odbc(), 
-#                                Driver = "SQL Server", 
-#                                Server = "MTO02438WSCHG7", 
-#                                Database = "DAS_DM", 
-#                                Trusted_Connection = "Yes")
+tryCatch({
+  connection_details <- dbConnect(odbc::odbc(), 
+                                Driver = "SQL Server", 
+                                Server = "MTO02438WSCHG7", 
+                                Database = "DAS_DM", 
+                                Trusted_Connection = "Yes")
+  message("Database connection established successfully")
+}, error = function(e) {
+  # If connection fails, print error message
+  message("Error connecting to database: ", e$message)
+  # Fallback to reading data from CSV files if connection fails
+  message("Will attempt to use CSV files instead")
+  connection_details <- NULL
+})
 
-# Function to load data from the database
-#load_data <- function(query) {
-#  data <- dbGetQuery(connection_details, query)
-#  return(data)
-#}
-
-# Example of loading specific tables
- #censo <- load_data("SELECT * FROM dbo.tb_censo_DM")
- #consultas <- load_data("SELECT * FROM tb_consulta_dm")
- #indicadores <- load_data("SELECT * FROM dbo.tb_datos_historico_indicadores")
- #incapacidades <- load_data("SELECT * FROM dbo.tb_dm_incap")
- #poblacion <- load_data("SELECT * FROM dbo.tb_poblacion")
+# Function to load data from the database or fallback to CSV
+load_data <- function(query, csv_fallback = NULL) {
+  if (!is.null(connection_details) && dbIsValid(connection_details)) {
+    tryCatch({
+      data <- dbGetQuery(connection_details, query)
+      return(data)
+    }, error = function(e) {
+      # If query fails, print error message
+      message("Error executing SQL query: ", e$message)
+      # Try fallback to CSV if provided
+      if (!is.null(csv_fallback)) {
+        message("Falling back to CSV file: ", csv_fallback)
+        return(read_csv(csv_fallback))
+      } else {
+        return(NULL)
+      }
+    })
+  } else if (!is.null(csv_fallback)) {
+    # If no connection, use CSV fallback
+    message("No active database connection. Using CSV file: ", csv_fallback)
+    return(read_csv(csv_fallback))
+  } else {
+    message("No active database connection and no CSV fallback provided.")
+    return(NULL)
+  }
+}
 
 # global.R
 metric_choices <- c("Incidencia", "Prevalencia", "Consultas", "Hospitalizaciones", "Mortalidad", "Incapacidades")
 
 #PAMF
-poblacion <- read_csv("data/tb_poblacion.csv")
-  poblacion_totales <- poblacion %>%
-    filter(Sexo == 0, Parametro =="PAMF") %>%
-    group_by(Anio, Cve_Presupuestal, Nombre_Unidad)%>%
-    summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop') %>%
-    mutate(Cve_Presupuestal = as.character(Cve_Presupuestal))
-    names(poblacion_totales) <- tolower(names(poblacion_totales))
+# Load population data from SQL Server with CSV fallback
+poblacion <- load_data("SELECT * FROM dbo.tb_poblacion", "data/tb_poblacion.csv")
+
+# Original code (commented out)
+#poblacion <- read_csv("data/tb_poblacion.csv")
+
+poblacion_totales <- poblacion %>%
+  filter(Sexo == 0, Parametro =="PAMF") %>%
+  group_by(Anio, Cve_Presupuestal, Nombre_Unidad)%>%
+  summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop') %>%
+  mutate(Cve_Presupuestal = as.character(Cve_Presupuestal),
+         Anio = as.character(Anio))  # Ensure Anio is character
+  names(poblacion_totales) <- tolower(names(poblacion_totales))
 
 poblacion_gpoedad <- poblacion %>%
     filter(Sexo != 0, Grupo_edad != "NI", Parametro == "PAMF") %>%
@@ -67,8 +96,11 @@ poblacion_gpoedad_incid <- poblacion_gpoedad %>%
 names(poblacion_gpoedad_incid)<- tolower(names(poblacion_gpoedad_incid))
 
 #Poblacion Riesgo de Trabajo
+# Load CUUMS master data from SQL Server with CSV fallback
+cuums <- load_data("SELECT * FROM CUUMS_MAESTRO", "data/cuums_maestro.csv")
 
-cuums <- read_csv("data/cuums_maestro.csv")
+# Original code (commented out)
+#cuums <- read_csv("data/cuums_maestro.csv")
 
 poblacion_rt <- poblacion %>% filter(Parametro == "PAU RT") %>%
                 left_join(cuums %>% select(ClavePresupuestal, cve_prei = UnidadInformacionPREI),
@@ -81,7 +113,8 @@ poblacion_totales_rt <- poblacion_rt %>%
   filter(Sexo == 0) %>%
   group_by(Anio, Cve_Presupuestal, Nombre_Unidad, cve_prei, Nombre_OOAD)%>%
   summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop') %>%
-  mutate(Cve_Presupuestal = as.character(Cve_Presupuestal))
+  mutate(Cve_Presupuestal = as.character(Cve_Presupuestal),
+         Anio = as.character(Anio))  # Ensure Anio is character
   names(poblacion_totales_rt) <- tolower(names(poblacion_totales_rt))
 
 poblacion_gpoedad_rt <- poblacion_rt %>%
@@ -92,32 +125,58 @@ poblacion_gpoedad_rt <- poblacion_rt %>%
 
 #Datos para gráficos
 data_censo <- reactiveVal({
-  data <- read_csv("data/tb_censo_DM.csv") %>%
+  data <- load_data("SELECT * FROM dbo.tb_censo_DM", "data/tb_censo_DM.csv") %>%
             rename(Dato= Pacientes_DM) #Pacientes_DM -> Numero de pacientes Prevalencia_DM -> prevalencia
   data
-  })
+  
+  # Original code (commented out)
+  #data <- read_csv("data/tb_censo_DM.csv") %>%
+  #          rename(Dato= Pacientes_DM)
+  #data
+})
 
-data_consulta <- reactiveVal(read_csv("data/tb_consulta_dm.csv"))
+data_consulta <- reactiveVal({
+  data <- load_data("SELECT * FROM tb_consulta_dm", "data/tb_consulta_dm.csv")
+  data
+  
+  # Original code (commented out)
+  #read_csv("data/tb_consulta_dm.csv")
+})
 
 data_incapacidad <- reactiveVal({
-  data <- read_csv("data/tb_dm_incap.csv") %>%
-    rename(Anio = PERIODO, Nombre_Unidad = descnivel, Grupo_edad = descgedad, Sexo = TIP_SEXO)%>%
-    group_by(Anio, Nombre_Unidad, NIVEL, Grupo_edad, Sexo) %>%
-      summarise(Dato = sum(NDIAS, na.rm = TRUE), 
-                Dato_prom = (sum(NDIAS, na.rm = TRUE)/sum(FREC, na.rm = TRUE)),
-                .groups = 'drop') %>%
-      mutate(Nombre_Unidad = case_when(is.na(Nombre_Unidad) ~ NA_character_,
-            Nombre_Unidad == "14 Jalisco" ~ "Jalisco",
-            Nombre_Unidad == "99 Nacional" ~ "Nacional",
-            TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
+  tryCatch({
+    data <- load_data("SELECT * FROM dbo.tb_dm_incap", "data/tb_dm_incap.csv") %>%
+      # Convert character columns to numeric right after loading
+      # Replace NAs from conversion errors with 0
+      mutate(NDIAS = as.numeric(NDIAS),
+             NDIAS = ifelse(is.na(NDIAS), 0, NDIAS),
+             FREC = as.numeric(FREC),
+             FREC = ifelse(is.na(FREC), 0, FREC)) %>%
+      rename(Anio = PERIODO, Nombre_Unidad = descnivel, Grupo_edad = descgedad, Sexo = TIP_SEXO)%>%
+      group_by(Anio, Nombre_Unidad, NIVEL, Grupo_edad, Sexo) %>%
+        summarise(Dato = sum(NDIAS, na.rm = TRUE), 
+                  Dato_prom = (sum(NDIAS, na.rm = TRUE)/sum(FREC, na.rm = TRUE)),
+                  .groups = 'drop') %>%
+        mutate(Nombre_Unidad = case_when(is.na(Nombre_Unidad) ~ NA_character_,
+              Nombre_Unidad == "14 Jalisco" ~ "Jalisco",
+              Nombre_Unidad == "99 Nacional" ~ "Nacional",
+              TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
+    data
+  }, error = function(e) {
+    # Log error to console instead of using showNotification
+    message("Error loading incapacidad data: ", e$message)
+    return(NULL)
+  })
+})
+
+data_hosp <- reactiveVal({
+  data <- load_data("SELECT * FROM dbo.tb_egreso_dm", "data/tb_egreso_dm.csv")
   data
 })
 
-data_hosp <- reactiveVal(read_csv("data/tb_egreso_dm.csv"))
-
 
 data_incidencia <- reactiveVal({
-data <- read_csv("data/tb_incidencia_dm.csv") %>%
+  data <- load_data("SELECT * FROM MORBI_DIABETES", "data/tb_incidencia_dm.csv") %>%
     filter(Sexo != 0, !Grupo_edad %in% c("TTotal", "seignora")) %>%
     mutate(Cve_Presupuestal = case_when(
       Nombre_OOAD == "Nacional" ~ "00",
@@ -136,15 +195,12 @@ data <- read_csv("data/tb_incidencia_dm.csv") %>%
     full_join(poblacion_gpoedad_incid, by = c("cve_presupuestal", "sexo", "anio", "grupo_edad")) %>%
     mutate(Dato = casos/totales_poblacion*100000)%>%
     rename(Anio = anio, Nombre_Unidad = nombre_unidad, Sexo = sexo, Grupo_edad = grupo_edad)
-data
+  data
 })
 
 
 data_mortalidad <- reactiveVal({
-#SELECT uni_adsc, cvesex, anio_def, gpoedad, COUNT(*) AS Dato
-#FROM MORTA_UNIDAD 
-#GROUP BY uni_adsc, cvesex, anio_def, gpoedad;
-data <- read_csv("data/tb_morta_dm.csv") %>%
+  data <- load_data("SELECT * FROM dbo.MORTA_DIABETES", "data/tb_morta_dm.csv") %>%
     filter(Sexo != 0, Grupo_edad != "Total") %>%
     mutate(Cve_Presupuestal = case_when(
       Nombre_OOAD == "Nacional" ~ "00",
@@ -156,7 +212,7 @@ data <- read_csv("data/tb_morta_dm.csv") %>%
     full_join(poblacion_gpoedad, by = c("Cve_Presupuestal", "Sexo", "Anio", "Grupo_edad")) %>%
     mutate(Casos = ifelse(is.na(Casos), 0, Casos)) %>%
     mutate(Dato = Casos/Totales_Poblacion * 100000) 
-data
+  data
 })
 
 
@@ -164,8 +220,11 @@ data
 ## Datos para métricas 
 #Prevalencia
 totales_anuales <- reactiveVal({
-    #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
-    data <- read_csv("data/tb_censo_DM.csv")
+    data <- load_data("SELECT * FROM dbo.tb_censo_DM", "data/tb_censo_DM.csv")
+    
+    # Original code (commented out)
+    #data <- read_csv("data/tb_censo_DM.csv")
+    
     data %>% 
       filter (Sexo == 0) %>%
       mutate(Nombre_Unidad = ifelse(nchar(Cve_Presupuestal) < 3 & Cve_Presupuestal != "00", "OOAD", Nombre_Unidad)) %>%
@@ -179,14 +238,19 @@ totales_anuales <- reactiveVal({
 
 #Consultas
 totales_consultas <- reactiveVal({
-
-    #data <- load_data("SELECT * FROM tb_consulta_DM")
-    data <- read_csv("data/tb_consulta_dm.csv")
+    data <- load_data("SELECT * FROM tb_consulta_dm", "data/tb_consulta_dm.csv")
+    
+    # Original code (commented out)
+    #data <- read_csv("data/tb_consulta_dm.csv")
+    
     data <- data %>% 
       filter(Parametro == 'Consulta_MF', Sexo == 0, Grupo_edad=="Total") %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal) %>%
       summarise(Dato = sum(Dato, na.rm = TRUE), .groups = 'drop') %>%
       rename(anio = Anio, cve_presupuestal = Cve_Presupuestal) %>%
+      # Ensure anio is character type for consistent joining
+      mutate(anio = as.character(anio),
+             cve_presupuestal = as.character(cve_presupuestal)) %>%
       left_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
       mutate(Dato2 = Dato/totales_poblacion*1000) %>%
       rename('Anio' = 'anio', 'Totales_Poblacion' = 'totales_poblacion')%>%
@@ -195,64 +259,99 @@ totales_consultas <- reactiveVal({
 
 
 totales_incap <- reactiveVal({
-    data <- read_csv("data/tb_dm_incap.csv")
-    data <- data %>% 
-      rename(Anio = PERIODO, Nombre_Unidad = descnivel) %>%
-      group_by(Anio, Nombre_Unidad, NIVEL) %>%
-      summarise(ndias = sum(NDIAS, na.rm = TRUE), 
-                Dato_prom = (sum(NDIAS, na.rm = TRUE)/sum(FREC, na.rm = TRUE)),
-                .groups = 'drop') %>%
-      mutate(NIVEL = as.character(NIVEL)) %>%
-      left_join(poblacion_totales_rt %>% select(cve_prei, nombre_ooad, anio, totales_poblacion), 
-                by = c('NIVEL' = 'cve_prei', "Anio" = "anio")) %>%
-      mutate(Dato = ndias/totales_poblacion*100) %>%
-      ##cambiar este case_when para que funcione cuando se agreguen mas estados, se puede hacer
-      ##un join con la tabla de estados que se puede extraer del cuums_maestro
-      mutate(Nombre_Unidad = case_when(is.na(Nombre_Unidad) ~ NA_character_,
-                                       str_detect(Nombre_Unidad, "^\\d{2} ") & !str_detect(Nombre_Unidad, "^99 ") ~ "OOAD",
-                                       Nombre_Unidad == "99 Nacional" ~ "Nacional",
-                                       TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
-    data
+    tryCatch({
+      data <- load_data("SELECT * FROM dbo.tb_dm_incap", "data/tb_dm_incap.csv") %>%
+        # Convert character columns to numeric right after loading
+        # Replace NAs from conversion errors with 0
+        mutate(NDIAS = as.numeric(NDIAS),
+               NDIAS = ifelse(is.na(NDIAS), 0, NDIAS),
+               FREC = as.numeric(FREC),
+               FREC = ifelse(is.na(FREC), 0, FREC))
+      
+      # Original code (commented out)
+      #data <- read_csv("data/tb_dm_incap.csv")
+      
+      data <- data %>% 
+        rename(Anio = PERIODO, Nombre_Unidad = descnivel) %>%
+        # Ensure Anio is character type for consistent joining
+        mutate(Anio = as.character(Anio)) %>%
+        group_by(Anio, Nombre_Unidad, NIVEL) %>%
+        summarise(ndias = sum(NDIAS, na.rm = TRUE), 
+                  Dato_prom = (sum(NDIAS, na.rm = TRUE)/sum(FREC, na.rm = TRUE)),
+                  .groups = 'drop') %>%
+        mutate(NIVEL = as.character(NIVEL)) %>%
+        left_join(
+          # Ensure anio in poblacion_totales_rt is also character type
+          poblacion_totales_rt %>% 
+            select(cve_prei, nombre_ooad, anio, totales_poblacion) %>%
+            mutate(anio = as.character(anio)), 
+          by = c('NIVEL' = 'cve_prei', "Anio" = "anio")
+        ) %>%
+        mutate(Dato = ndias/totales_poblacion*100) %>%
+        ##cambiar este case_when para que funcione cuando se agreguen mas estados, se puede hacer
+        ##un join con la tabla de estados que se puede extraer del cuums_maestro
+        mutate(Nombre_Unidad = case_when(is.na(Nombre_Unidad) ~ NA_character_,
+                                        str_detect(Nombre_Unidad, "^\\d{2} ") & !str_detect(Nombre_Unidad, "^99 ") ~ "OOAD",
+                                        Nombre_Unidad == "99 Nacional" ~ "Nacional",
+                                        TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
+      data
+    }, error = function(e) {
+      # Log error to console instead of using showNotification
+      message("Error loading incapacidad data: ", e$message)
+      return(NULL)
+    })
 })
 
 totales_hosp <- reactiveVal({
     tryCatch({
-    #data <- load_data("SELECT * FROM tb_egreso_dm")
-    data <- read_csv("data/tb_egreso_dm.csv")
+    data <- load_data("SELECT * FROM dbo.tb_egreso_dm", "data/tb_egreso_dm.csv")
+    
+    # Original code (commented out)
+    #data <- read_csv("data/tb_egreso_dm.csv")
+    
     data %>%
       filter(Sexo == 0, Parametro == "Egresos_DM_Adsc", Especialidad == "Total", Grupo_edad=="Total") %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal) %>%
       summarise(Dato = sum(Dato, na.rm = TRUE),.groups = 'drop') %>%
       rename(anio = Anio, cve_presupuestal = Cve_Presupuestal) %>%
+      # Ensure anio is character type for consistent joining
+      mutate(anio = as.character(anio),
+             cve_presupuestal = as.character(cve_presupuestal)) %>%
       left_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
       mutate(Dato2 = Dato/totales_poblacion*100000) %>%
       select(Anio = anio,Nombre_OOAD, Nombre_Unidad, Dato, totales_poblacion, Dato2)
   }, error = function(e) {
-    # Handle any errors that occur when loading the data
-    showNotification(paste("Error loading data:", e$message), type = "error")
+    # Log error to console instead of using showNotification
+    message("Error loading hospitalization data: ", e$message)
     return(NULL)
   })
 })
 
 totales_dias_estancia<- reactiveVal({
     tryCatch({
-    #data <- load_data("SELECT * FROM tb_egreso_dm")
-    data <- read_csv("data/tb_egreso_dm.csv")
+    data <- load_data("SELECT * FROM dbo.tb_egreso_dm", "data/tb_egreso_dm.csv")
+    
+    # Original code (commented out)
+    #data <- read_csv("data/tb_egreso_dm.csv")
+    
     data %>% 
       filter(Sexo == 0, Parametro == "DiasEstancia_DM_Adsc") %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad) %>%
       summarise(Dato = mean(Dato, na.rm = TRUE),
                 .groups = 'drop')
   }, error = function(e) {
-    # Handle any errors that occur when loading the data
-    showNotification(paste("Error loading data:", e$message), type = "error")
+    # Log error to console instead of using showNotification
+    message("Error loading days of stay data: ", e$message)
     return(NULL)
   })
 })
 
 totales_incidencia <- reactiveVal({
-  data <- read_csv("data/tb_incidencia_dm.csv")
-    #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
+  data <- load_data("SELECT * FROM MORBI_DIABETES", "data/tb_incidencia_dm.csv")
+  
+  # Original code (commented out)
+  #data <- read_csv("data/tb_incidencia_dm.csv")
+  
   data <- data %>%
       filter(Grupo_edad == "TTotal", Sexo == 0) %>%
       mutate(Cve_Presupuestal = case_when(
@@ -261,6 +360,9 @@ totales_incidencia <- reactiveVal({
       TRUE ~ Cve_Presupuestal
     )) %>%
       rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%
+      # Ensure anio is character type for consistent joining
+      mutate(anio = as.character(anio),
+             cve_presupuestal = as.character(cve_presupuestal)) %>%
       group_by(anio, cve_presupuestal) %>%
       summarise(Pacientes_DM = sum(Dato, na.rm = TRUE), .groups = "drop") %>%
       inner_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
@@ -271,7 +373,10 @@ totales_incidencia <- reactiveVal({
 })
 
 totales_mortalidad <- reactiveVal({
-    mort<- read_csv("data/tb_morta_dm.csv")
+    mort <- load_data("SELECT * FROM dbo.MORTA_DIABETES", "data/tb_morta_dm.csv")
+    
+    # Original code (commented out)
+    #mort <- read_csv("data/tb_morta_dm.csv")
 
     data <- mort %>% 
       filter(Grupo_edad == "Total", Sexo == 0) %>%
@@ -281,6 +386,9 @@ totales_mortalidad <- reactiveVal({
       TRUE ~ Cve_Presupuestal
     )) %>%
       rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%
+      # Ensure anio is character type for consistent joining
+      mutate(anio = as.character(anio),
+             cve_presupuestal = as.character(cve_presupuestal)) %>%
       group_by(anio, cve_presupuestal) %>%
       summarise(count = sum(Dato), .groups = 'drop') %>%
       left_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>%
@@ -289,7 +397,15 @@ totales_mortalidad <- reactiveVal({
     data                
 })
 
-data_censo_maestro <- reactiveVal(read_csv("data/cuums_maestro.csv"))
+data_censo_maestro <- reactiveVal({
+  data <- load_data("SELECT * FROM CUUMS_MAESTRO", "data/cuums_maestro.csv")
+  data
+  
+  # Original code (commented out)
+  #read_csv("data/cuums_maestro.csv")
+})
+
+# These files need to be loaded from files as specified
 citiesmx <- reactiveVal(read_csv("data/citiesmx.csv"))
 municipalities <- st_read("data/mun21gw/mun21gw.shp")
 jalisco_shape <- municipalities %>%
@@ -298,7 +414,7 @@ jalisco_shape <- municipalities %>%
 cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "utf-8"))
 
 data_indicadores <- reactiveVal({
-  data <- read_csv("data/tb_datos_historico_indicadores.csv") %>%
+  data <- load_data("SELECT * FROM tb_datos_historico_indicadores") %>%
     select(-nombre_unidad)%>%
     filter(digito_equivalencia %in% c(558, 470, 5, 1, 8, 9, 7, 3, 6)) %>%
     left_join(select(cuums, ClavePresupuestal, DenominacionUnidad), by=c("clave" = "ClavePresupuestal"))%>% 
@@ -310,26 +426,25 @@ data_indicadores <- reactiveVal({
     )) %>%
     mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador))
   data
+  
+  # Original code (commented out)
+  #data <- read_csv("data/tb_datos_historico_indicadores.csv") %>%
+  #  select(-nombre_unidad)%>%
+  #  filter(digito_equivalencia %in% c(558, 470, 5, 1, 8, 9, 7, 3, 6)) %>%
+  #  left_join(select(cuums, ClavePresupuestal, DenominacionUnidad), by=c("clave" = "ClavePresupuestal"))%>% 
+  #  left_join(cat_ind, by=join_by(nom_indicador==codigo)) %>%
+  #  mutate(nombre_unidad = case_when(
+  #    clave == "00" ~ "Nacional",
+  #    clave == "14" ~ "Jalisco",
+  #    TRUE ~ DenominacionUnidad
+  #  )) %>%
+  #  mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador))
+  #data
 })
 
-
-
-# Connection string to establish a connection to the SQL Server database
-#connection_details <- dbConnect(odbc::odbc(), 
-#                                Driver = "SQL Server", 
-#                                Server = "MTO02438WSCHG7", 
-#                                Database = "DAS_DM", 
-#                                Trusted_Connection = "Yes")
-
-# Function to load data from the database
-#load_data <- function(query) {
-#  data <- dbGetQuery(connection_details, query)
-#  return(data)
-#}
-
-# Example of loading specific tables
- #censo <- load_data("SELECT * FROM dbo.tb_censo_DM")
- #consultas <- load_data("SELECT * FROM tb_consulta_dm")
- #indicadores <- load_data("SELECT * FROM dbo.tb_datos_historico_indicadores")
- #incapacidades <- load_data("SELECT * FROM dbo.tb_dm_incap")
- #poblacion <- load_data("SELECT * FROM dbo.tb_poblacion")
+# Close connection when Shiny app stops
+onStop(function() {
+  if(exists("connection_details") && dbIsValid(connection_details)) {
+    dbDisconnect(connection_details)
+  }
+})
