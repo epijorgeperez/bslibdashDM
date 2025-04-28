@@ -23,7 +23,7 @@ library(ggrepel)
 tryCatch({
   connection_details <- dbConnect(odbc::odbc(), 
                                 Driver = "SQL Server", 
-                                Server = "MTO02438WSCHG7", 
+                                Server = "11.33.41.96", 
                                 Database = "DAS_DM", 
                                 Trusted_Connection = "Yes")
   message("Database connection established successfully")
