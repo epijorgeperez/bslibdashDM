@@ -20,7 +20,7 @@ Para correr el dashboard localmente:
    - Descomprime el archivo ZIP
    - Coloca el archivo mun21gw.shp en la carpeta `data/mun21gw/` de tu proyecto
 
-3) En tu terminal de R Instala las librerías y paquetes necesarios con ``` renv::restore ```
+3) En tu terminal de R Instala las librerías y paquetes necesarios con ``` renv::restore() ```
 
 4) En tu terminal de R cambia tu directorio de trabajo ``` setwd("./bslibdashDM") ```
 
