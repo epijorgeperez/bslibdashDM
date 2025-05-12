@@ -9,6 +9,7 @@ y aquí -> https://github.com/epijorgeperez/bslibdashDM/blob/main/Documentos.md
 
 ![image](https://github.com/epijorgeperez/CIIMSS-Diabetes/assets/69016243/1e7423ab-381c-4459-9251-6277045d8701)
 
+
 ### Tablero Shiny
 
 Para correr el dashboard localmente: 
@@ -19,7 +20,7 @@ Para correr el dashboard localmente:
    - Descomprime el archivo ZIP
    - Coloca el archivo mun21gw.shp en la carpeta `data/mun21gw/` de tu proyecto
 
-3) En tu terminal de R Instala las librerías y paquetes necesarios con ``` renv::restore ```
+3) En tu terminal de R Instala las librerías y paquetes necesarios con ``` renv::restore() ```
 
 4) En tu terminal de R cambia tu directorio de trabajo ``` setwd("./bslibdashDM") ```
 
