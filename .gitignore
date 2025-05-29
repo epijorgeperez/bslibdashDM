@@ -10,6 +10,7 @@ data/tb_consulta_dm.csv
 data/tb_censo_DM.csv
 data/tb_dm_incap.csv
 data/cuums_maestro.csv
+.env
 data/tb_poblacion.csv
 data/tb_incidencia_dm.csv
 data/tb_dm_incap.csv

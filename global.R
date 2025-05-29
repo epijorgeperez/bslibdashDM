@@ -21,16 +21,34 @@ library(ggrepel)
 
 # Connection string to establish a connection to the SQL Server database
 tryCatch({
-  connection_details <- dbConnect(odbc::odbc(), 
-                                Driver = "SQL Server", 
-                                Server = "11.33.41.96", 
-                                Database = "DAS_DM", 
-                                Trusted_Connection = "Yes")
-  message("Database connection established successfully")
+  # Obtener credenciales desde variables de entorno
+  db_server <- Sys.getenv("DB_SERVER", "11.33.41.96")  # Valor por defecto como fallback
+  db_name <- Sys.getenv("DB_NAME", "DAS_DM")
+  db_user <- Sys.getenv("DB_USER", "")
+  db_password <- Sys.getenv("DB_PASSWORD", "")
+  
+  # Si hay credenciales, usar autenticación SQL
+  if (db_user != "" && db_password != "") {
+    connection_details <- dbConnect(odbc::odbc(), 
+                                  Driver = "SQL Server", 
+                                  Server = db_server, 
+                                  Database = db_name,
+                                  UID = db_user,
+                                  PWD = db_password)
+    message("Database connection established with SQL authentication")
+  } else {
+    # Intentar con autenticación Windows (como antes)
+    connection_details <- dbConnect(odbc::odbc(), 
+                                  Driver = "SQL Server", 
+                                  Server = db_server, 
+                                  Database = db_name,
+                                  Trusted_Connection = "Yes")
+    message("Database connection established with Windows authentication")
+  }
 }, error = function(e) {
-  # If connection fails, print error message
+  # Si falla la conexión, muestra mensaje de error
   message("Error connecting to database: ", e$message)
-  # Fallback to reading data from CSV files if connection fails
+  # Fallback a archivos CSV si falla la conexión
   message("Will attempt to use CSV files instead")
   connection_details <- NULL
 })
