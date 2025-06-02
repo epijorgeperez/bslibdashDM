@@ -19,16 +19,30 @@ library(sf)
 library(plotly)
 library(ggrepel)
 
+# Initialize connection_details to NULL before attempting connection
+connection_details <- NULL
+
 # Connection string to establish a connection to the SQL Server database
 tryCatch({
+  # Debug info
+  message("Current user: ", Sys.getenv("USERNAME"))
+  message("Domain: ", Sys.getenv("USERDOMAIN"))
+  message("Working directory: ", getwd())
+  
   # Obtener credenciales desde variables de entorno
   db_server <- Sys.getenv("DB_SERVER", "11.33.41.96")  # Valor por defecto como fallback
   db_name <- Sys.getenv("DB_NAME", "DAS_DM")
   db_user <- Sys.getenv("DB_USER", "")
   db_password <- Sys.getenv("DB_PASSWORD", "")
   
+  message("Attempting connection to server: ", db_server)
+  message("Database: ", db_name)
+  message("SQL Auth user provided: ", ifelse(db_user != "", "YES", "NO"))
+  message("SQL Auth password provided: ", db_password)
+
   # Si hay credenciales, usar autenticación SQL
   if (db_user != "" && db_password != "") {
+    message("Using SQL Server authentication")
     connection_details <- dbConnect(odbc::odbc(), 
                                   Driver = "SQL Server", 
                                   Server = db_server, 
@@ -38,26 +52,51 @@ tryCatch({
     message("Database connection established with SQL authentication")
   } else {
     # Intentar con autenticación Windows (como antes)
-    connection_details <- dbConnect(odbc::odbc(), 
-                                  Driver = "SQL Server", 
-                                  Server = db_server, 
-                                  Database = db_name,
-                                  Trusted_Connection = "Yes")
+    message("Attempting Windows authentication")
+    
+    # Try alternative connection method for Shiny compatibility
+    tryCatch({
+      connection_details <- dbConnect(odbc::odbc(), 
+                                    Driver = "SQL Server", 
+                                    Server = db_server, 
+                                    Database = db_name,
+                                    Trusted_Connection = "Yes")
+    }, error = function(e1) {
+      message("First Windows auth method failed: ", e1$message)
+      # Try with explicit integrated security
+      connection_details <- dbConnect(odbc::odbc(), 
+                                    Driver = "SQL Server", 
+                                    Server = db_server, 
+                                    Database = db_name,
+                                    `Integrated Security` = "SSPI")
+    })
     message("Database connection established with Windows authentication")
   }
 }, error = function(e) {
   # Si falla la conexión, muestra mensaje de error
   message("Error connecting to database: ", e$message)
+  message("Error class: ", class(e))
   # Fallback a archivos CSV si falla la conexión
   message("Will attempt to use CSV files instead")
   connection_details <- NULL
 })
+
+
+
 
 # Function to load data from the database or fallback to CSV
 load_data <- function(query, csv_fallback = NULL) {
   if (!is.null(connection_details) && dbIsValid(connection_details)) {
     tryCatch({
       data <- dbGetQuery(connection_details, query)
+      i = 1      
+      for (col in colnames(data)){ #Agregado AIDE
+        if(class(data[,i])== "character")
+        {
+          Encoding(data[[col]]) <- "latin1"
+        }
+        i = i + 1
+      }
       return(data)
     }, error = function(e) {
       # If query fails, print error message
@@ -86,6 +125,7 @@ metric_choices <- c("Incidencia", "Prevalencia", "Consultas", "Hospitalizaciones
 #PAMF
 # Load population data from SQL Server with CSV fallback
 poblacion <- load_data("SELECT * FROM dbo.tb_poblacion", "data/tb_poblacion.csv")
+message(head(poblacion,1))
 
 # Original code (commented out)
 #poblacion <- read_csv("data/tb_poblacion.csv")
