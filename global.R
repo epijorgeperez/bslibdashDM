@@ -58,6 +58,14 @@ load_data <- function(query, csv_fallback = NULL) {
   if (!is.null(connection_details) && dbIsValid(connection_details)) {
     tryCatch({
       data <- dbGetQuery(connection_details, query)
+      i = 1      
+      for (col in colnames(data)){ #Agregado AIDE
+        if(class(data[,i])== "character")
+        {
+          Encoding(data[[col]]) <- "latin1"
+        }
+        i = i + 1
+      }
       return(data)
     }, error = function(e) {
       # If query fails, print error message
