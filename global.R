@@ -19,6 +19,13 @@ library(sf)
 library(plotly)
 library(ggrepel)
 
+
+# Configure Shiny encoding options for proper Spanish character display
+options(
+  shiny.encoding = "UTF-8",
+  readr.default_locale = readr::locale(encoding = "UTF-8")
+)
+
 # Initialize connection_details to NULL before attempting connection
 connection_details <- NULL
 
@@ -48,7 +55,8 @@ tryCatch({
                                   Server = db_server, 
                                   Database = db_name,
                                   UID = db_user,
-                                  PWD = db_password)
+                                  PWD = db_password,
+                                  encoding = "UTF-8")
     message("Database connection established with SQL authentication")
   } else {
     # Intentar con autenticación Windows (como antes)
@@ -60,7 +68,8 @@ tryCatch({
                                     Driver = "SQL Server", 
                                     Server = db_server, 
                                     Database = db_name,
-                                    Trusted_Connection = "Yes")
+                                    Trusted_Connection = "Yes",
+                                    encoding = "UTF-8")
     }, error = function(e1) {
       message("First Windows auth method failed: ", e1$message)
       # Try with explicit integrated security
@@ -68,7 +77,8 @@ tryCatch({
                                     Driver = "SQL Server", 
                                     Server = db_server, 
                                     Database = db_name,
-                                    `Integrated Security` = "SSPI")
+                                    `Integrated Security` = "SSPI",
+                                    encoding = "UTF-8")
     })
     message("Database connection established with Windows authentication")
   }
@@ -89,13 +99,17 @@ load_data <- function(query, csv_fallback = NULL) {
   if (!is.null(connection_details) && dbIsValid(connection_details)) {
     tryCatch({
       data <- dbGetQuery(connection_details, query)
-      i = 1      
-      for (col in colnames(data)){ #Agregado AIDE
-        if(class(data[,i])== "character")
-        {
-          Encoding(data[[col]]) <- "latin1"
+      
+      # Fix encoding for character columns
+      for (col in colnames(data)) {
+        if(is.character(data[[col]])) {
+          # Try UTF-8 first, fallback to latin1 if needed
+          tryCatch({
+            Encoding(data[[col]]) <- "UTF-8"
+          }, error = function(e) {
+            Encoding(data[[col]]) <- "latin1"
+          })
         }
-        i = i + 1
       }
       return(data)
     }, error = function(e) {
@@ -118,6 +132,7 @@ load_data <- function(query, csv_fallback = NULL) {
     return(NULL)
   }
 }
+
 
 # global.R
 metric_choices <- c("Incidencia", "Prevalencia", "Consultas", "Hospitalizaciones", "Mortalidad", "Incapacidades")
@@ -182,9 +197,12 @@ poblacion_gpoedad_rt <- poblacion_rt %>%
 
 
 #Datos para gráficos
+message("Loading data_censo...")
 data_censo <- reactiveVal({
+  message("Executing data_censo query...")
   data <- load_data("SELECT * FROM dbo.tb_censo_DM", "data/tb_censo_DM.csv") %>%
             rename(Dato= Pacientes_DM) #Pacientes_DM -> Numero de pacientes Prevalencia_DM -> prevalencia
+  message("data_censo loaded successfully")
   data
   
   # Original code (commented out)
@@ -193,16 +211,21 @@ data_censo <- reactiveVal({
   #data
 })
 
+message("Loading data_consulta...")
 data_consulta <- reactiveVal({
+  message("Executing data_consulta query...")
   data <- load_data("SELECT * FROM tb_consulta_dm", "data/tb_consulta_dm.csv")
+  message("data_consulta loaded successfully")
   data
   
   # Original code (commented out)
   #read_csv("data/tb_consulta_dm.csv")
 })
 
+message("Loading data_incapacidad...")
 data_incapacidad <- reactiveVal({
   tryCatch({
+    message("Executing data_incapacidad query...")
     data <- load_data("SELECT * FROM dbo.tb_dm_incap", "data/tb_dm_incap.csv") %>%
       # Convert character columns to numeric right after loading
       # Replace NAs from conversion errors with 0
@@ -219,6 +242,7 @@ data_incapacidad <- reactiveVal({
               Nombre_Unidad == "14 Jalisco" ~ "Jalisco",
               Nombre_Unidad == "99 Nacional" ~ "Nacional",
               TRUE ~ str_trim(str_extract(Nombre_Unidad, "(?<=\\s).*"))))
+    message("data_incapacidad loaded successfully")
     data
   }, error = function(e) {
     # Log error to console instead of using showNotification
@@ -227,13 +251,18 @@ data_incapacidad <- reactiveVal({
   })
 })
 
+message("Loading data_hosp...")
 data_hosp <- reactiveVal({
+  message("Executing data_hosp query...")
   data <- load_data("SELECT * FROM dbo.tb_egreso_dm", "data/tb_egreso_dm.csv")
+  message("data_hosp loaded successfully")
   data
 })
 
 
+message("Loading data_incidencia...")
 data_incidencia <- reactiveVal({
+  message("Executing data_incidencia query...")
   data <- load_data("SELECT * FROM MORBI_DIABETES", "data/tb_incidencia_dm.csv") %>%
     filter(Sexo != 0, !Grupo_edad %in% c("TTotal", "seignora")) %>%
     mutate(Cve_Presupuestal = case_when(
@@ -253,6 +282,7 @@ data_incidencia <- reactiveVal({
     full_join(poblacion_gpoedad_incid, by = c("cve_presupuestal", "sexo", "anio", "grupo_edad")) %>%
     mutate(Dato = casos/totales_poblacion*100000)%>%
     rename(Anio = anio, Nombre_Unidad = nombre_unidad, Sexo = sexo, Grupo_edad = grupo_edad)
+  message("data_incidencia loaded successfully")
   data
 })
 
