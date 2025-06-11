@@ -18,6 +18,7 @@ library(leaflet.extras)
 library(sf)
 library(plotly)
 library(ggrepel)
+library(dotenv)
 
 
 # Configure Shiny encoding options for proper Spanish character display
