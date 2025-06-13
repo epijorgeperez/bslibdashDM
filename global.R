@@ -20,6 +20,8 @@ library(plotly)
 library(ggrepel)
 library(dotenv)
 
+# Cargar configuración de base de datos
+source("config/database.R")
 
 # Configure Shiny encoding options for proper Spanish character display
 options(
@@ -30,109 +32,77 @@ options(
 # Initialize connection_details to NULL before attempting connection
 connection_details <- NULL
 
-# Connection string to establish a connection to the SQL Server database
+# Establecer conexión usando la nueva lógica multi-driver
 tryCatch({
-  # Debug info
+  message("=== Starting Database Connection Process ===")
+  
+  # Debug info del entorno
   message("Current user: ", Sys.getenv("USERNAME"))
   message("Domain: ", Sys.getenv("USERDOMAIN"))
   message("Working directory: ", getwd())
   
-  # Obtener credenciales desde variables de entorno
-  db_server <- Sys.getenv("DB_SERVER", "11.33.41.96")  # Valor por defecto como fallback
-  db_name <- Sys.getenv("DB_NAME", "DAS_DM")
-  db_user <- Sys.getenv("DB_USER", "")
-  db_password <- Sys.getenv("DB_PASSWORD", "")
+  # Usar la función de conexión multi-driver
+  connection_details <- get_database_connection()
   
-  message("Attempting connection to server: ", db_server)
-  message("Database: ", db_name)
-  message("SQL Auth user provided: ", ifelse(db_user != "", "YES", "NO"))
-  message("SQL Auth password provided: ", db_password)
-
-  # Si hay credenciales, usar autenticación SQL
-  if (db_user != "" && db_password != "") {
-    message("Using SQL Server authentication")
-    connection_details <- dbConnect(odbc::odbc(), 
-                                  Driver = "SQL Server", 
-                                  Server = db_server, 
-                                  Database = db_name,
-                                  UID = db_user,
-                                  PWD = db_password,
-                                  encoding = "UTF-8")
-    message("Database connection established with SQL authentication")
+  # Probar la conexión
+  if (test_connection(connection_details)) {
+    message("✅ Database connection test passed")
   } else {
-    # Intentar con autenticación Windows (como antes)
-    message("Attempting Windows authentication")
-    
-    # Try alternative connection method for Shiny compatibility
-    tryCatch({
-      connection_details <- dbConnect(odbc::odbc(), 
-                                    Driver = "SQL Server", 
-                                    Server = db_server, 
-                                    Database = db_name,
-                                    Trusted_Connection = "Yes",
-                                    encoding = "UTF-8")
-    }, error = function(e1) {
-      message("First Windows auth method failed: ", e1$message)
-      # Try with explicit integrated security
-      connection_details <- dbConnect(odbc::odbc(), 
-                                    Driver = "SQL Server", 
-                                    Server = db_server, 
-                                    Database = db_name,
-                                    `Integrated Security` = "SSPI",
-                                    encoding = "UTF-8")
-    })
-    message("Database connection established with Windows authentication")
+    warning("⚠️ Database connection established but test query failed")
   }
+  
 }, error = function(e) {
-  # Si falla la conexión, muestra mensaje de error
-  message("Error connecting to database: ", e$message)
+  # Si falla la conexión, la aplicación no puede funcionar
+  message("❌ CRITICAL ERROR: Cannot connect to database")
+  message("Error: ", e$message)
   message("Error class: ", class(e))
-  # Fallback a archivos CSV si falla la conexión
-  message("Will attempt to use CSV files instead")
-  connection_details <- NULL
+  message("Application cannot start without database connection")
+  stop("Database connection is required for this application")
 })
 
+# Function to load data from the database (ONLY database, no CSV fallback)
+load_data <- function(query) {
+  if (is.null(connection_details) || !dbIsValid(connection_details)) {
+    stop("No active database connection available")
+  }
+  
+  tryCatch({
+    message("📊 Executing SQL query...")
+    data <- dbGetQuery(connection_details, query)
+    message("✅ Query executed successfully. Rows returned: ", nrow(data))
+    
+    # Fix encoding for character columns
+    for (col in colnames(data)) {
+      if(is.character(data[[col]])) {
+        # Try UTF-8 first, fallback to latin1 if needed
+        tryCatch({
+          Encoding(data[[col]]) <- "UTF-8"
+        }, error = function(e) {
+          Encoding(data[[col]]) <- "latin1"
+        })
+      }
+    }
+    return(data)
+  }, error = function(e) {
+    # If query fails, stop the application
+    message("❌ CRITICAL ERROR: SQL query failed")
+    message("Error: ", e$message)
+    message("Query was: ", substr(query, 1, 100), "...")
+    stop("Database query failed: ", e$message)
+  })
+}
 
-
-
-# Function to load data from the database or fallback to CSV
-load_data <- function(query, csv_fallback = NULL) {
+# Función de utilidad para verificar el estado de la conexión
+check_db_status <- function() {
   if (!is.null(connection_details) && dbIsValid(connection_details)) {
-    tryCatch({
-      data <- dbGetQuery(connection_details, query)
-      
-      # Fix encoding for character columns
-      for (col in colnames(data)) {
-        if(is.character(data[[col]])) {
-          # Try UTF-8 first, fallback to latin1 if needed
-          tryCatch({
-            Encoding(data[[col]]) <- "UTF-8"
-          }, error = function(e) {
-            Encoding(data[[col]]) <- "latin1"
-          })
-        }
-      }
-      return(data)
-    }, error = function(e) {
-      # If query fails, print error message
-      message("Error executing SQL query: ", e$message)
-      # Try fallback to CSV if provided
-      if (!is.null(csv_fallback)) {
-        message("Falling back to CSV file: ", csv_fallback)
-        return(read_csv(csv_fallback))
-      } else {
-        return(NULL)
-      }
-    })
-  } else if (!is.null(csv_fallback)) {
-    # If no connection, use CSV fallback
-    message("No active database connection. Using CSV file: ", csv_fallback)
-    return(read_csv(csv_fallback))
+    return("✅ Connected")
   } else {
-    message("No active database connection and no CSV fallback provided.")
-    return(NULL)
+    return("❌ Disconnected")
   }
 }
+
+message("=== Global.R loaded successfully ===")
+message("Database status: ", check_db_status())
 
 
 # global.R
