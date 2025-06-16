@@ -20,9 +20,6 @@ library(plotly)
 library(ggrepel)
 library(dotenv)
 
-# Cargar configuración de base de datos
-source("config/database.R")
-
 # Configure Shiny encoding options for proper Spanish character display
 options(
   shiny.encoding = "UTF-8",
@@ -32,77 +29,87 @@ options(
 # Initialize connection_details to NULL before attempting connection
 connection_details <- NULL
 
-# Establecer conexión usando la nueva lógica multi-driver
-tryCatch({
-  message("=== Starting Database Connection Process ===")
-  
-  # Debug info del entorno
-  message("Current user: ", Sys.getenv("USERNAME"))
-  message("Domain: ", Sys.getenv("USERDOMAIN"))
-  message("Working directory: ", getwd())
-  
-  # Usar la función de conexión multi-driver
-  connection_details <- get_database_connection()
-  
-  # Probar la conexión
-  if (test_connection(connection_details)) {
-    message("✅ Database connection test passed")
-  } else {
-    warning("⚠️ Database connection established but test query failed")
-  }
-  
-}, error = function(e) {
-  # Si falla la conexión, la aplicación no puede funcionar
-  message("❌ CRITICAL ERROR: Cannot connect to database")
-  message("Error: ", e$message)
-  message("Error class: ", class(e))
-  message("Application cannot start without database connection")
-  stop("Database connection is required for this application")
-})
+# Configuración fija
+DB_SERVER <- "11.33.41.96"
+DB_NAME <- "DAS_DM"
 
-# Function to load data from the database (ONLY database, no CSV fallback)
+# Credenciales desde variables de entorno
+DB_USER <- Sys.getenv("DB_USER", "")
+DB_PASSWORD <- Sys.getenv("DB_PASSWORD", "")
+
+# Validar credenciales
+if (DB_USER == "" || DB_PASSWORD == "") {
+  stop("❌ DB_USER and DB_PASSWORD environment variables are required")
+}
+
+# Función de conexión simplificada
+get_database_connection <- function() {
+  message("🔌 Connecting to SQL Server...")
+  
+  tryCatch({
+    connection <- dbConnect(
+      odbc::odbc(),
+      Driver = "ODBC Driver 17 for SQL Server",
+      Server = DB_SERVER,
+      Database = DB_NAME,
+      UID = DB_USER,
+      PWD = DB_PASSWORD,
+      encoding = "UTF-8"
+    )
+    
+    # Test connection
+    test_result <- dbGetQuery(connection, "SELECT 1 AS test")
+    if (nrow(test_result) == 1) {
+      message("✅ Database connected successfully")
+      return(connection)
+    } else {
+      stop("Connection test failed")
+    }
+    
+  }, error = function(e) {
+    message("❌ Connection failed: ", e$message)
+    stop("Database connection is required for this application")
+  })
+}
+
+# Establecer conexión global
+message("=== Starting Database Connection ===")
+connection_details <- get_database_connection()
+
+# Función para cargar datos (simplificada)
 load_data <- function(query) {
-  if (is.null(connection_details) || !dbIsValid(connection_details)) {
-    stop("No active database connection available")
+  if (!dbIsValid(connection_details)) {
+    stop("No active database connection")
   }
   
   tryCatch({
-    message("📊 Executing SQL query...")
     data <- dbGetQuery(connection_details, query)
-    message("✅ Query executed successfully. Rows returned: ", nrow(data))
+    message("✅ Query OK. Rows: ", nrow(data))
     
-    # Fix encoding for character columns
-    for (col in colnames(data)) {
-      if(is.character(data[[col]])) {
-        # Try UTF-8 first, fallback to latin1 if needed
-        tryCatch({
-          Encoding(data[[col]]) <- "UTF-8"
-        }, error = function(e) {
-          Encoding(data[[col]]) <- "latin1"
-        })
+    # Fix encoding
+    data[] <- lapply(data, function(x) {
+      if (is.character(x)) {
+        Encoding(x) <- "UTF-8"
       }
-    }
+      return(x)
+    })
+    
     return(data)
   }, error = function(e) {
-    # If query fails, stop the application
-    message("❌ CRITICAL ERROR: SQL query failed")
-    message("Error: ", e$message)
-    message("Query was: ", substr(query, 1, 100), "...")
+    message("❌ Query failed: ", e$message)
     stop("Database query failed: ", e$message)
   })
 }
 
-# Función de utilidad para verificar el estado de la conexión
-check_db_status <- function() {
-  if (!is.null(connection_details) && dbIsValid(connection_details)) {
-    return("✅ Connected")
-  } else {
-    return("❌ Disconnected")
+# Cerrar conexión al terminar
+onStop(function() {
+  if (exists("connection_details") && dbIsValid(connection_details)) {
+    dbDisconnect(connection_details)
+    message("🔌 Database disconnected")
   }
-}
+})
 
-message("=== Global.R loaded successfully ===")
-message("Database status: ", check_db_status())
+message("=== Database setup complete ===")
 
 
 # global.R
@@ -110,11 +117,9 @@ metric_choices <- c("Incidencia", "Prevalencia", "Consultas", "Hospitalizaciones
 
 #PAMF
 # Load population data from SQL Server with CSV fallback
-poblacion <- load_data("SELECT * FROM dbo.tb_poblacion", "data/tb_poblacion.csv")
+poblacion <- load_data("SELECT * FROM dbo.tb_poblacion")
 message(head(poblacion,1))
 
-# Original code (commented out)
-#poblacion <- read_csv("data/tb_poblacion.csv")
 
 poblacion_totales <- poblacion %>%
   filter(Sexo == 0, Parametro =="PAMF") %>%
@@ -141,10 +146,8 @@ names(poblacion_gpoedad_incid)<- tolower(names(poblacion_gpoedad_incid))
 
 #Poblacion Riesgo de Trabajo
 # Load CUUMS master data from SQL Server with CSV fallback
-cuums <- load_data("SELECT * FROM CUUMS_MAESTRO", "data/cuums_maestro.csv")
+cuums <- load_data("SELECT * FROM CUUMS_MAESTRO")
 
-# Original code (commented out)
-#cuums <- read_csv("data/cuums_maestro.csv")
 
 poblacion_rt <- poblacion %>% filter(Parametro == "PAU RT") %>%
                 left_join(cuums %>% select(ClavePresupuestal, cve_prei = UnidadInformacionPREI),
@@ -171,33 +174,27 @@ poblacion_gpoedad_rt <- poblacion_rt %>%
 message("Loading data_censo...")
 data_censo <- reactiveVal({
   message("Executing data_censo query...")
-  data <- load_data("SELECT * FROM dbo.tb_censo_DM", "data/tb_censo_DM.csv") %>%
+  data <- load_data("SELECT * FROM dbo.tb_censo_DM") %>%
             rename(Dato= Pacientes_DM) #Pacientes_DM -> Numero de pacientes Prevalencia_DM -> prevalencia
   message("data_censo loaded successfully")
   data
-  
-  # Original code (commented out)
-  #data <- read_csv("data/tb_censo_DM.csv") %>%
-  #          rename(Dato= Pacientes_DM)
-  #data
+
 })
 
 message("Loading data_consulta...")
 data_consulta <- reactiveVal({
   message("Executing data_consulta query...")
-  data <- load_data("SELECT * FROM tb_consulta_dm", "data/tb_consulta_dm.csv")
+  data <- load_data("SELECT * FROM tb_consulta_dm")
   message("data_consulta loaded successfully")
   data
-  
-  # Original code (commented out)
-  #read_csv("data/tb_consulta_dm.csv")
+
 })
 
 message("Loading data_incapacidad...")
 data_incapacidad <- reactiveVal({
   tryCatch({
     message("Executing data_incapacidad query...")
-    data <- load_data("SELECT * FROM dbo.tb_dm_incap", "data/tb_dm_incap.csv") %>%
+    data <- load_data("SELECT * FROM dbo.tb_dm_incap") %>%
       # Convert character columns to numeric right after loading
       # Replace NAs from conversion errors with 0
       mutate(NDIAS = as.numeric(NDIAS),
@@ -225,7 +222,7 @@ data_incapacidad <- reactiveVal({
 message("Loading data_hosp...")
 data_hosp <- reactiveVal({
   message("Executing data_hosp query...")
-  data <- load_data("SELECT * FROM dbo.tb_egreso_dm", "data/tb_egreso_dm.csv")
+  data <- load_data("SELECT * FROM dbo.tb_egreso_dm")
   message("data_hosp loaded successfully")
   data
 })
@@ -234,7 +231,7 @@ data_hosp <- reactiveVal({
 message("Loading data_incidencia...")
 data_incidencia <- reactiveVal({
   message("Executing data_incidencia query...")
-  data <- load_data("SELECT * FROM MORBI_DIABETES", "data/tb_incidencia_dm.csv") %>%
+  data <- load_data("SELECT * FROM MORBI_DIABETES") %>%
     filter(Sexo != 0, !Grupo_edad %in% c("TTotal", "seignora")) %>%
     mutate(Cve_Presupuestal = case_when(
       Nombre_OOAD == "Nacional" ~ "00",
@@ -259,7 +256,7 @@ data_incidencia <- reactiveVal({
 
 
 data_mortalidad <- reactiveVal({
-  data <- load_data("SELECT * FROM dbo.MORTA_DIABETES", "data/tb_morta_dm.csv") %>%
+  data <- load_data("SELECT * FROM dbo.MORTA_DIABETES") %>%
     filter(Sexo != 0, Grupo_edad != "Total") %>%
     mutate(Cve_Presupuestal = case_when(
       Nombre_OOAD == "Nacional" ~ "00",
@@ -279,7 +276,7 @@ data_mortalidad <- reactiveVal({
 ## Datos para métricas 
 #Prevalencia
 totales_anuales <- reactiveVal({
-    data <- load_data("SELECT * FROM dbo.tb_censo_DM", "data/tb_censo_DM.csv")
+    data <- load_data("SELECT * FROM dbo.tb_censo_DM")
     
     # Original code (commented out)
     #data <- read_csv("data/tb_censo_DM.csv")
@@ -297,10 +294,7 @@ totales_anuales <- reactiveVal({
 
 #Consultas
 totales_consultas <- reactiveVal({
-    data <- load_data("SELECT * FROM tb_consulta_dm", "data/tb_consulta_dm.csv")
-    
-    # Original code (commented out)
-    #data <- read_csv("data/tb_consulta_dm.csv")
+    data <- load_data("SELECT * FROM tb_consulta_dm")
     
     data <- data %>% 
       filter(Parametro == 'Consulta_MF', Sexo == 0, Grupo_edad=="Total") %>%
@@ -319,7 +313,7 @@ totales_consultas <- reactiveVal({
 
 totales_incap <- reactiveVal({
     tryCatch({
-      data <- load_data("SELECT * FROM dbo.tb_dm_incap", "data/tb_dm_incap.csv") %>%
+      data <- load_data("SELECT * FROM dbo.tb_dm_incap") %>%
         # Convert character columns to numeric right after loading
         # Replace NAs from conversion errors with 0
         mutate(NDIAS = as.numeric(NDIAS),
@@ -363,10 +357,8 @@ totales_incap <- reactiveVal({
 
 totales_hosp <- reactiveVal({
     tryCatch({
-    data <- load_data("SELECT * FROM dbo.tb_egreso_dm", "data/tb_egreso_dm.csv")
-    
-    # Original code (commented out)
-    #data <- read_csv("data/tb_egreso_dm.csv")
+    data <- load_data("SELECT * FROM dbo.tb_egreso_dm")
+
     
     data %>%
       filter(Sexo == 0, Parametro == "Egresos_DM_Adsc", Especialidad == "Total", Grupo_edad=="Total") %>%
@@ -388,11 +380,9 @@ totales_hosp <- reactiveVal({
 
 totales_dias_estancia<- reactiveVal({
     tryCatch({
-    data <- load_data("SELECT * FROM dbo.tb_egreso_dm", "data/tb_egreso_dm.csv")
+    data <- load_data("SELECT * FROM dbo.tb_egreso_dm")
     
-    # Original code (commented out)
-    #data <- read_csv("data/tb_egreso_dm.csv")
-    
+
     data %>% 
       filter(Sexo == 0, Parametro == "DiasEstancia_DM_Adsc") %>%
       group_by(Anio, Nombre_OOAD, Nombre_Unidad) %>%
@@ -406,10 +396,8 @@ totales_dias_estancia<- reactiveVal({
 })
 
 totales_incidencia <- reactiveVal({
-  data <- load_data("SELECT * FROM MORBI_DIABETES", "data/tb_incidencia_dm.csv")
-  
-  # Original code (commented out)
-  #data <- read_csv("data/tb_incidencia_dm.csv")
+  data <- load_data("SELECT * FROM MORBI_DIABETES")
+
   
   data <- data %>%
       filter(Grupo_edad == "TTotal", Sexo == 0) %>%
@@ -432,10 +420,8 @@ totales_incidencia <- reactiveVal({
 })
 
 totales_mortalidad <- reactiveVal({
-    mort <- load_data("SELECT * FROM dbo.MORTA_DIABETES", "data/tb_morta_dm.csv")
-    
-    # Original code (commented out)
-    #mort <- read_csv("data/tb_morta_dm.csv")
+    mort <- load_data("SELECT * FROM dbo.MORTA_DIABETES")
+
 
     data <- mort %>% 
       filter(Grupo_edad == "Total", Sexo == 0) %>%
@@ -457,11 +443,9 @@ totales_mortalidad <- reactiveVal({
 })
 
 data_censo_maestro <- reactiveVal({
-  data <- load_data("SELECT * FROM CUUMS_MAESTRO", "data/cuums_maestro.csv")
+  data <- load_data("SELECT * FROM CUUMS_MAESTRO")
   data
   
-  # Original code (commented out)
-  #read_csv("data/cuums_maestro.csv")
 })
 
 # These files need to be loaded from files as specified
@@ -501,20 +485,6 @@ data_indicadores <- reactiveVal({
     )) %>%
     mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador))
   data
-  
-  # Original code (commented out)
-  #data <- read_csv("data/tb_datos_historico_indicadores.csv") %>%
-  #  select(-nombre_unidad)%>%
-  #  filter(digito_equivalencia %in% c(558, 470, 5, 1, 8, 9, 7, 3, 6)) %>%
-  #  left_join(select(cuums, ClavePresupuestal, DenominacionUnidad), by=c("clave" = "ClavePresupuestal"))%>% 
-  #  left_join(cat_ind, by=join_by(nom_indicador==codigo)) %>%
-  #  mutate(nombre_unidad = case_when(
-  #    clave == "00" ~ "Nacional",
-  #    clave == "14" ~ "Jalisco",
-  #    TRUE ~ DenominacionUnidad
-  #  )) %>%
-  #  mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador))
-  #data
 })
 
 # Close connection when Shiny app stops
