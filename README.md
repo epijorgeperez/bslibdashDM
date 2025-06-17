@@ -5,15 +5,11 @@ Revisa la documentación del proyecto aquí -> https://imssmx-my.sharepoint.com/
 
 y aquí -> https://github.com/epijorgeperez/bslibdashDM/blob/main/Documentos.md
 
-![image](https://github.com/epijorgeperez/CIIMSS-Diabetes/assets/69016243/1e7423ab-381c-4459-9251-6277045d8701)
+![Dashboard Preview](https://cdn.abacus.ai/images/25824478-1869-4969-ba5d-3039684eba74.png)
 
-## Configuración de Base de Datos
+## 🔧 Configuración de Base de Datos
 
-Esta aplicación se conecta automáticamente a la base de datos del IMSS usando diferentes drivers según el entorno:
-
-- **Windows**: Microsoft ODBC Driver for SQL Server
-- **Linux/Docker**: FreeTDS driver
-- **Auto-detección**: Detecta automáticamente el driver disponible
+Esta aplicación se conecta automáticamente a la base de datos del IMSS detectando el driver ODBC disponible en tu sistema.
 
 ### Variables de Entorno Requeridas
 
@@ -21,157 +17,139 @@ Crea un archivo `.env` basado en `.env.example` con las siguientes variables:
 
 ```bash
 # Database Configuration
-DB_DRIVER_TYPE=auto          # auto, mssql, freetds
-DB_USER=tu_usuario
+DB_USER=tu_usuario_imss
 DB_PASSWORD=tu_contraseña
-DB_NAME=DAS_DM              # Base de datos (opcional, por defecto DAS_DM)
-```
+DB_NAME=DAS_DM
 
-**Nota**: El servidor de base de datos (11.33.41.96) está configurado automáticamente.
 
-## Ejecución Local
+Nota: El servidor de base de datos (11.33.41.96) está configurado automáticamente.
 
-### Tablero Shiny (Desarrollo Local)
+💻 Desarrollo Local
+Requisitos Previos
+R 4.5.0+
+RStudio (recomendado)
+Microsoft ODBC Driver 17 o 18 for SQL Server
+Acceso a red IMSS para conexión a base de datos
+Configuración e Instalación
 
-Para correr el dashboard localmente: 
+Clona el repositorio:
 
-1) Abre tu terminal (powershell, bash) y clona el repositorio: 
-   ```bash
-   git clone https://github.com/epijorgeperez/bslibdashDM.git
-   ```
+git clone https://github.com/epijorgeperez/bslibdashDM.git
+cd bslibdashDM
 
-2) **Importante:** Descarga el archivo de shapefile de municipios de México desde: http://www.conabio.gob.mx/informacion/gis/maps/geo/mun21gw.zip 
-   - Descomprime el archivo ZIP
-   - Coloca el archivo mun21gw.shp en la carpeta `data/mun21gw/` de tu proyecto
 
-3) Configura las variables de entorno:
-   ```bash
-   # Copia el archivo de ejemplo
-   cp .env.example .env
-   
-   # Edita .env con tus credenciales
-   nano .env  # o tu editor preferido
-   ```
+Descarga el shapefile de municipios:
 
-4) En tu terminal de R instala las librerías y paquetes necesarios con:
-   ```r
-   renv::restore()
-   ```
+Descarga: http://www.conabio.gob.mx/informacion/gis/maps/geo/mun21gw.zip
+Descomprime el archivo ZIP
+Coloca el archivo mun21gw.shp en la carpeta data/mun21gw/ de tu proyecto
 
-5) En tu terminal de R cambia tu directorio de trabajo:
-   ```r
-   setwd("./bslibdashDM")
-   ```
+Configura las variables de entorno:
 
-6) Llama a la librería de shiny:
-   ```r
-   library(shiny)
-   ```
+# Copia el archivo de ejemplo
+cp .env.example .env
 
-7) Corre la app:
-   ```r
-   runApp()
-   ```
+# Edita .env con tus credenciales IMSS
+# Puedes usar cualquier editor de texto
 
-## Ejecución con Docker
 
-### Requisitos Previos
+Instala las dependencias de R:
 
-- Docker y Docker Compose instalados
-- Archivo `.env` configurado con credenciales
+# En RStudio o consola de R
+renv::restore()
 
-### Despliegue
 
-1) Clona el repositorio:
-   ```bash
-   git clone https://github.com/epijorgeperez/bslibdashDM.git
-   cd bslibdashDM
-   ```
+Ejecuta la aplicación:
 
-2) Configura variables de entorno:
-   ```bash
-   cp .env.example .env
-   # Edita .env con tus credenciales
-   ```
+# Cargar librería
+library(shiny)
 
-3) Construye y ejecuta el contenedor:
-   ```bash
-   cd deploy
-   docker-compose up -d --build
-   ```
+# Ejecutar aplicación
+runApp()
 
-4) Accede a la aplicación en: http://localhost:3838
+Instalación de ODBC Driver (Windows)
 
-### Comandos Útiles Docker
+Si no tienes el driver ODBC instalado:
 
-```bash
-# Ver logs
-docker-compose logs -f bslibdashdm
+Descarga Microsoft ODBC Driver 17 for SQL Server desde: https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server
 
-# Reiniciar aplicación (cambios en código R)
-docker-compose restart bslibdashdm
+Instala el driver siguiendo las instrucciones del instalador
 
-# Reconstruir imagen (cambios en Dockerfile)
-docker-compose down
-docker-compose up -d --build
+Verifica la instalación en R:
 
-# Parar aplicación
-docker-compose down
-```
+odbc::odbcListDrivers()
 
-## Configuración Multi-Entorno
+🛠️ Solución de Problemas
+Error de Conexión a Base de Datos
 
-La aplicación detecta automáticamente el entorno y usa el driver de base de datos apropiado:
+Verificar credenciales:
 
-### Windows (Desarrollo Local)
-- Usa Microsoft ODBC Driver 18/17 for SQL Server
-- Configuración automática de SSL/TLS
+Asegúrate de que DB_USER y DB_PASSWORD en .env sean correctos
+Las credenciales deben ser las mismas que usas para acceder a sistemas IMSS
 
-### Linux/Docker (Producción)
-- Usa FreeTDS driver
-- Configuración optimizada para contenedores
+Verificar conectividad de red:
 
-### Variables de Entorno Disponibles
+Debes estar conectado a la red IMSS
+Verifica que puedas acceder a otros sistemas internos del IMSS
 
-| Variable | Descripción | Valores | Por Defecto |
-|----------|-------------|---------|-------------|
-| `DB_DRIVER_TYPE` | Tipo de driver | `auto`, `mssql`, `freetds` | `auto` |
-| `DB_USER` | Usuario de base de datos | string | **requerido** |
-| `DB_PASSWORD` | Contraseña de base de datos | string | **requerido** |
-| `DB_NAME` | Nombre de base de datos | string | `DAS_DM` |
+Verificar driver ODBC:
 
-## Solución de Problemas
+# En R, ejecuta:
+odbc::odbcListDrivers()
+# Debe mostrar "ODBC Driver 17 for SQL Server" o similar
 
-### Error de Conexión a Base de Datos
+Problemas de Carga
+Tiempo de carga: La aplicación tarda 5-8 minutos en cargar inicialmente debido al volumen de datos (1M+ registros)
+Memoria: Asegúrate de tener al menos 4GB de RAM disponible
+Paciencia: No cierres la aplicación durante la carga inicial
+Errores de Paquetes
 
-1. **Verificar credenciales**: Asegúrate de que `DB_USER` y `DB_PASSWORD` sean correctos
-2. **Verificar conectividad**: Desde el servidor, verifica conectividad a 11.33.41.96:1433
-3. **Verificar drivers**: Ejecuta `odbc::odbcListDrivers()` en R para ver drivers disponibles
+Si hay errores relacionados con paquetes faltantes:
 
-### Error en Docker
+# Reinstalar dependencias
+renv::restore()
 
-1. **Reconstruir imagen**: `docker-compose up -d --build`
-2. **Ver logs detallados**: `docker-compose logs -f bslibdashdm`
-3. **Verificar variables**: `docker-compose config` para ver configuración
+# Si persiste el problema, limpiar y reinstalar
+renv::clean()
+renv::restore()
 
-### Cambios en Código
+Variables de Entorno
 
-- **Archivos R** (`source/`): Solo reiniciar contenedor
-- **Configuración** (`Dockerfile`, etc.): Reconstruir imagen
+Si la aplicación no encuentra las variables de entorno:
 
-## Arquitectura
-
-```
+Verifica que el archivo .env esté en la raíz del proyecto
+Verifica que no tenga espacios extra o caracteres especiales
+Reinicia RStudio después de crear/modificar .env
+📊 Especificaciones Técnicas
+Rendimiento
+Tiempo de carga inicial: 5-8 minutos
+Registros procesados: 1M+ filas de datos IMSS
+Memoria recomendada: 4GB+ RAM
+Requisitos de red: Conexión a red IMSS
+Dependencias Principales
+R 4.5.0+
+Shiny & bslib (interfaz)
+DBI & odbc (base de datos)
+dplyr (manipulación de datos)
+plotly & leaflet (visualizaciones)
+🏗️ Estructura del Proyecto
 bslibdashDM/
-├── config/
-│   └── database.R          # Lógica de conexión multi-driver
-├── deploy/
-│   ├── docker-compose.yml  # Configuración Docker
-│   └── Dockerfile          # Imagen de contenedor
-├── source/                 # Código fuente Shiny
-│   ├── app.R
-│   ├── global.R
-│   └── ...
-├── .env.example           # Template de variables
+├── global.R               # Configuración global y conexión DB
+├── app.R                  # Aplicación principal Shiny
+├── data/                  # Datos estáticos
+│   └── mun21gw/          # Shapefiles de municipios (descargar)
+├── .env.example          # Template de variables de entorno
+├── .env                  # Variables de entorno (crear)
+├── renv.lock             # Dependencias R
 └── README.md
-```
+
+📞 Soporte
+
+Para problemas técnicos:
+
+Revisa la sección de Solución de Problemas
+Consulta la documentación en SharePoint
+Verifica que tengas acceso a la red IMSS
+Contacta al equipo de desarrollo
+
+Nota: Esta aplicación requiere acceso a la red interna del IMSS para funcionar correctamente.

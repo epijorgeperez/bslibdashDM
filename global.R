@@ -26,6 +26,22 @@ options(
   readr.default_locale = readr::locale(encoding = "UTF-8")
 )
 
+# Configurar variables de entorno para usuario shiny
+Sys.setenv(OPENSSL_CONF = "/etc/shiny-server/openssl.cnf")
+
+# Cargar variables de entorno desde .env
+if (file.exists(".env")) {
+  readRenviron(".env")
+  message("✅ Variables de entorno cargadas desde .env")
+} else {
+  message("⚠️ Archivo .env no encontrado")
+}
+
+# Verificar variables críticas
+message("🔧 OPENSSL_CONF: ", Sys.getenv("OPENSSL_CONF"))
+message("👤 DB_USER: ", Sys.getenv("DB_USER"))
+
+
 # Initialize connection_details to NULL before attempting connection
 connection_details <- NULL
 
