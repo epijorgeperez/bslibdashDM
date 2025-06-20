@@ -28,9 +28,8 @@ ui <- page_navbar(
     title = "Métricas principales",
     layout_column_wrap(
       width = 1,
-      heights_equal = "row",
-      metric_summary_UI("metric_summary"),
-      height = "220px"
+      fill = FALSE,
+      metric_summary_UI("metric_summary")
     ),
     layout_column_wrap(
       width = 1/2,

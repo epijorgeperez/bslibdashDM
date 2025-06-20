@@ -6,14 +6,14 @@ metric_summary_UI <- function(id) {
   
   create_metric_card <- function(title, metrics) {
     card(
-      card_header(title),
+      card_header(title, style = "padding: 0.3rem 0.5rem; font-size: 0.9rem;"),
       card_body(
-        style = "padding: 0.25rem; font-size: 0.9rem; line-height: 1.1;",
+        style = "padding: 0.2rem 0.5rem; font-size: 0.8rem; line-height: 1.0;",
         lapply(seq_along(metrics), function(i) {
           div(
             style = paste0("display: flex; justify-content: space-between;", 
-                           if(i < length(metrics)) " margin-bottom: 0.1rem;" else ""),
-            span(style = "margin-right: 0.5rem;", strong(names(metrics)[i])),
+                           if(i < length(metrics)) " margin-bottom: 0.05rem;" else ""),
+            span(style = "margin-right: 0.3rem;", strong(names(metrics)[i])),
             span(textOutput(ns(metrics[[i]])))
           )
         })
@@ -21,44 +21,58 @@ metric_summary_UI <- function(id) {
     )
   }
 
-  layout_columns(
-    create_metric_card("Incidencia", list(
-      "Unidad:" = "incidence",
-      "OOAD:" = "incidence_ooad",
-      "Nacional:" = "incidence_nac"
-    )),
-    create_metric_card("Prevalencia", list(
-      "Unidad:" = "prevalence",
-      "OOAD:" = "prevalence_ooad",
-      "Nacional:" = "prevalence_nac"
-    )),
-    create_metric_card("Consultas", list(
-      "Unidad:" = "consultations",
-      "OOAD:" = "consultations_ooad",
-      "Nacional:" = "consultations_nac"
-    )),
-    create_metric_card("Hospitalizaciones", list(
-      "Unidad:" = "hospitalizaciones",
-      "OOAD:" = "hospitalizaciones_ooad",
-      "Nacional:" = "hospitalizaciones_nac",
-      "Estancia prom.:" = "dias",
-      "Estancia OOAD prom.:" = "dias_ooad",
-      "Estancia Nac. prom." = "dias_nac"
-    )),
-    create_metric_card("Mortalidad", list(
-      "Unidad:" = "mortality",
-      "OOAD:" = "mortality_ooad",
-      "Nacional:" = "mortality_nac"
-    )),
-    create_metric_card("Incapacidades", list(
-      "Unidad:" = "disabilities",
-      "OOAD:" = "disabilities_ooad",
-      "Nacional:" = "disabilities_nac",
-      "Promedio:" = "disabilities_prom",
-      "Promedio OOAD:" = "disabilities_ooad_prom",
-      "Promedio Nac.:" = "disabilities_nac_prom"
-    )),
-    col_widths = c(2, 2, 2, 2, 2, 2)
+  div(
+    # Primera fila: Incidencia, Prevalencia, Mortalidad, Consultas
+    layout_columns(
+      fill = FALSE,
+      create_metric_card("Incidencia", list(
+        "Unidad:" = "incidence",
+        "OOAD:" = "incidence_ooad",
+        "Nacional:" = "incidence_nac"
+      )),
+      create_metric_card("Prevalencia", list(
+        "Unidad:" = "prevalence",
+        "OOAD:" = "prevalence_ooad",
+        "Nacional:" = "prevalence_nac"
+      )),
+      create_metric_card("Mortalidad", list(
+        "Unidad:" = "mortality",
+        "OOAD:" = "mortality_ooad",
+        "Nacional:" = "mortality_nac"
+      )),
+      create_metric_card("Consultas", list(
+        "Unidad:" = "consultations",
+        "OOAD:" = "consultations_ooad",
+        "Nacional:" = "consultations_nac"
+      )),
+      col_widths = c(3, 3, 3, 3)
+    ),
+    div(style = "margin: 0.5rem 0;"),
+    # Segunda fila: Hospitalizaciones divididas y Incapacidades divididas
+    layout_columns(
+      fill = FALSE,
+      create_metric_card("Hospitalizaciones", list(
+        "Unidad:" = "hospitalizaciones",
+        "OOAD:" = "hospitalizaciones_ooad",
+        "Nacional:" = "hospitalizaciones_nac"
+      )),
+      create_metric_card("Días de estancia", list(
+        "Estancia prom.:" = "dias",
+        "Estancia OOAD prom.:" = "dias_ooad",
+        "Estancia Nac. prom.:" = "dias_nac"
+      )),
+      create_metric_card("Incapacidades", list(
+        "Unidad:" = "disabilities",
+        "OOAD:" = "disabilities_ooad",
+        "Nacional:" = "disabilities_nac"
+      )),
+      create_metric_card("Días Incapacidad", list(
+        "Promedio:" = "disabilities_prom",
+        "Promedio OOAD:" = "disabilities_ooad_prom",
+        "Promedio Nac.:" = "disabilities_nac_prom"
+      )),
+      col_widths = c(3, 3, 3, 3)
+    )
   )
 }
 
