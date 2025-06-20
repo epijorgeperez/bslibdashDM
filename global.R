@@ -358,7 +358,7 @@ totales_incidencia <- reactiveVal({
     filter(Grupo_edad == "TTotal", Sexo == 0) %>%
     mutate(Cve_Presupuestal = case_when(
     Nombre_OOAD == "Nacional" ~ "00",
-    Nombre_OOAD == "Jalisco" & is.na(Cve_Presupuestal) ~ "14",
+    startsWith(Nombre_OOAD, "Jalisco") & Nombre_Unidad == "" ~ "14",
     TRUE ~ Cve_Presupuestal
   )) %>%
     rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%
@@ -376,7 +376,7 @@ totales_mortalidad <- reactiveVal({
     filter(Grupo_edad == "Total", Sexo == 0) %>%
     mutate(Cve_Presupuestal = case_when(
     Nombre_OOAD == "Nacional" ~ "00",
-    Nombre_OOAD == "Jalisco" & is.na(Cve_Presupuestal) ~ "14",
+    Nombre_OOAD == "Jalisco" & is.na(Nombre_Unidad) ~ "14",
     TRUE ~ Cve_Presupuestal
   )) %>%
     rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%

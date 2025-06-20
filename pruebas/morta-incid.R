@@ -1,18 +1,20 @@
 library(dplyr)
 library(readr)
 library(tidyr)
-
+#source("pruebas/conexion.R")
 #totales_incidencia <- reactiveVal({
     #data <- load_data("SELECT * FROM dbo.tb_censo_DM")
-    poblacion <- read_csv("data/tb_poblacion.csv")
-    poblacion_totales <- poblacion %>%
+    #poblacion <- read_csv("data/tb_poblacion.csv")
+
+pob <- load_data("SELECT * FROM dbo.tb_poblacion")
+    poblacion_totales <- pob %>%
     filter(Sexo == 0) %>%
     group_by(Anio, Cve_Presupuestal, Nombre_Unidad)%>%
     summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop')%>%
     mutate(Cve_Presupuestal = as.character(Cve_Presupuestal))
     names(poblacion_totales) <- tolower(names(poblacion_totales))
 
-poblacion_gpoedad <- poblacion %>%
+poblacion_gpoedad <- pob %>%
     filter(Sexo != 0, Grupo_edad != "NI", Parametro == "PAMF") %>%
     group_by(Anio, Cve_Presupuestal, Nombre_Unidad, Sexo, Grupo_edad)%>%
     summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop')
@@ -92,16 +94,29 @@ filtered  <- incid_sexo_edad  %>%
 
 # Totales mortalidad
 
-mort <- read_csv("data/tb_morta_dm.csv")
+poblacion_totales <- pob %>%
+  filter(Sexo == 0, Parametro =="PAMF") %>%
+  group_by(Anio, Cve_Presupuestal, Nombre_Unidad)%>%
+  summarise(Totales_Poblacion = sum(Poblacion, na.rm = TRUE), .groups = 'drop') %>%
+  mutate(Cve_Presupuestal = as.character(Cve_Presupuestal),
+         Anio = as.character(Anio))  # Ensure Anio is character
+  names(poblacion_totales) <- tolower(names(poblacion_totales))
 
-data <- mort %>% 
-      filter(Grupo_edad == "Total", Sexo == 0) %>%
-      rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%
-      group_by(anio, cve_presupuestal) %>%
-      summarise(count = sum(Dato), .groups = 'drop') %>%
-      #rename(anio = anio_def, cve_presupuestal = uni_adsc) %>%
-      left_join(poblacion_totales, by = c("anio", "cve_presupuestal"))%>%
-                mutate(Dato = count/totales_poblacion*100000)
+totales <- mortalidad %>% 
+    filter(Grupo_edad == "Total", Sexo == 0) %>%
+    mutate(Cve_Presupuestal = case_when(
+    Nombre_OOAD == "Nacional" ~ "00",
+    Nombre_OOAD == "Jalisco" & is.na(Nombre_Unidad) ~ "14",
+    TRUE ~ Cve_Presupuestal
+  )) %>%
+    rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%
+    mutate(anio = as.character(anio),
+           cve_presupuestal = as.character(cve_presupuestal)) %>%
+    group_by(anio, cve_presupuestal) %>% 
+    summarise(count = sum(Dato), .groups = 'drop') %>% #filter(Cve_Presupuestal=="00")
+    left_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
+    mutate(Dato = count/totales_poblacion*100000) %>%
+    rename(Nombre_Unidad = nombre_unidad, Anio = anio)
 
 # Mortalidad por edad y sexo
 poblacion_gpoedad <- poblacion %>%
@@ -118,6 +133,42 @@ data_m <- mort %>%
     mutate(Dato = Casos/Totales_Poblacion * 100000) 
 
 
+
+
+#Incidencia
+
+incid %>%
+    filter(Grupo_edad == "TTotal", Sexo == 0) %>%
+    mutate(Cve_Presupuestal = case_when(
+    Nombre_OOAD == "Nacional" ~ "00",
+    startsWith(Nombre_OOAD, "Jalisco") & Nombre_Unidad == "" ~ "14",
+    TRUE ~ Cve_Presupuestal
+  )) %>%
+    rename(anio=Anio, cve_presupuestal= Cve_Presupuestal) %>%
+    mutate(anio = as.character(anio),
+           cve_presupuestal = as.character(cve_presupuestal)) %>% 
+    group_by(anio, cve_presupuestal) %>%
+    summarise(Pacientes_DM = sum(Dato, na.rm = TRUE), .groups = "drop") %>% 
+    inner_join(poblacion_totales, by = c("anio", "cve_presupuestal")) %>%
+    mutate(Dato = Pacientes_DM / totales_poblacion * 100000) %>%
+    rename(Nombre_Unidad = nombre_unidad, Anio = anio)
+
+
+
+
+incid %>% 
+  filter(Nombre_OOAD == "Jalisco") %>%
+  select(Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal) %>%
+  distinct()
+incid %>% 
+  filter(grepl("^Jalisco\\s*", Nombre_OOAD) & Nombre_Unidad == "") %>%
+  select(Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal) %>%
+  distinct()
+
+
+tail(incid)
+
+unique(incid$Nombre_OOAD)
 
 
 ## RANDOM
