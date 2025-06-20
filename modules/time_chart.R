@@ -32,7 +32,7 @@ time_chart_server <- function(id, metrica, totales_anuales, totales_consultas, t
 
       # Calculate the range of the data for y-axis limits
       y_range <- range(filtered$Dato, na.rm = TRUE)
-      y_padding <- diff(y_range) * 0.1  # Add 10% padding
+      y_max_with_padding <- y_range[2] * 1.35  # Add 35% padding above maximum value
 
       # Custom JavaScript function for formatting dates
       formatDate <- JS("function(d) {
@@ -49,7 +49,7 @@ time_chart_server <- function(id, metrica, totales_anuales, totales_consultas, t
           drawGrid = FALSE,
           colors = ("steelblue")
         ) %>%
-        dyAxis("y", label = metrica(), valueRange = c(y_range[1] - y_padding, y_range[2] + y_padding)) %>%
+        dyAxis("y", label = metrica(), valueRange = c(0, y_max_with_padding)) %>%
         dyAxis("x", label = "Año", axisLabelFormatter = formatDate) %>%
         #dyRangeSelector() %>%
         dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE) %>%
