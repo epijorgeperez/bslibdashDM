@@ -2,7 +2,7 @@
 
 age_sex_graph_UI <- function(id) {
   ns <- NS(id)
-  echarts4rOutput(ns("age_sex_graph"), height = "300px", width = "100%")
+  echarts4rOutput(ns("age_sex_graph"), height = "400px", width = "100%")
 }
 
 age_sex_graph_server <- function(id, metrica, data_censo, data_consulta, data_incapacidad, data_hosp, data_mortalidad, data_incidencia, anio, ooad, unidad_medica) {

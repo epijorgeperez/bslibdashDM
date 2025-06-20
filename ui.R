@@ -31,27 +31,27 @@ ui <- page_navbar(
       fill = FALSE,
       metric_summary_UI("metric_summary")
     ),
-    layout_column_wrap(
-      width = 1/2,
-      heights_equal = "row",
-      layout_column_wrap(
-        width = 1,
-        heights_equal = "row",
-        card(
-          full_screen = TRUE,
-          card_header("Curva Temporal"),
-          time_chart_UI("time_chart")
-        ),
-        card(
-          full_screen = TRUE,
-          card_header("Gráfico Edad y Sexo"),
-          age_sex_graph_UI("age_sex_graph")
-        )
+    layout_columns(
+      fill = FALSE,
+      col_widths = c(6, 6),
+      card(
+        full_screen = TRUE,
+        card_header("Curva Temporal"),
+        time_chart_UI("time_chart")
       ),
       card(
         full_screen = TRUE,
         card_header("Mapa"),
         map_chart_ui("map")
+      )
+    ),
+    layout_columns(
+      fill = FALSE,
+      col_widths = c(12),
+      card(
+        full_screen = TRUE,
+        card_header("Gráfico Edad y Sexo"),
+        age_sex_graph_UI("age_sex_graph")
       )
     )
   ),

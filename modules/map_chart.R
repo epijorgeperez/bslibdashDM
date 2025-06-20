@@ -3,7 +3,7 @@
 map_chart_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    leafletOutput(ns("map"), width = "100%", height = "680px"),
+    leafletOutput(ns("map"), width = "100%", height = "400px"),
     absolutePanel(
       id = ns("legend"), class = "legend",
       top = 10, right = 10,

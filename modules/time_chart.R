@@ -2,12 +2,7 @@
 
 time_chart_UI <- function(id) {
   ns <- NS(id)
-  card(
-    full_screen = TRUE,
-    card_body(
-      dygraphOutput(ns("time_chart"), height = "300px", width = "100%")
-    )
-  )
+  dygraphOutput(ns("time_chart"), height = "400px", width = "100%")
 }
 
 library(htmlwidgets)
