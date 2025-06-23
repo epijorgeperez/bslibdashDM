@@ -9,7 +9,7 @@ source("modules/indicadores_cruce.R")
 function(input, output, session) {
   
   observeEvent(totales_anuales(), {
-    updateSelectInput(session, "anio", choices = c(2025:2014), selected = 2025)
+    updateSelectInput(session, "anio", choices = c(2025:2014), selected = 2024)
     updateSelectInput(session, "ooad", choices = sort(unique(totales_anuales()$Nombre_OOAD[totales_anuales()$Nombre_OOAD != "Nacional"])))
     updateSelectInput(session, "unidad_medica", choices = sort(unique(totales_anuales()$Nombre_Unidad)))
   })

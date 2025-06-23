@@ -22,7 +22,7 @@ ui <- page_navbar(
     selectInput("anio", "Año:", choices = NULL, selectize = TRUE),
     selectInput("ooad", "OOAD:", choices = NULL),
     selectInput("unidad_medica", "Unidad Médica:", choices = NULL),
-    selectInput("metric_choice", "Métrica a analizar:", choices = metric_choices, selected = "Prevalencia")
+    selectInput("metric_choice", "Métrica a analizar:", choices = metric_choices, selected = "Incidencia")
   ),
   nav_panel(
     title = "Métricas principales",
