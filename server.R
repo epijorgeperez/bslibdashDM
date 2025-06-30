@@ -1,3 +1,4 @@
+source("modules/inicio_portada.R")
 source("modules/metric_summary.R")
 source("modules/age_sex_graph.R")
 source("modules/time_chart.R")
@@ -18,6 +19,9 @@ function(input, output, session) {
   ooad <- reactive({ input$ooad })
   unidad_medica <- reactive({ input$unidad_medica })
   metrica <- reactive({ input$metric_choice })
+
+  # Módulo de inicio/portada
+  inicio_portada_server("inicio_portada")
 
   metric_summary_server("metric_summary", totales_anuales, totales_consultas, totales_incap, totales_hosp, 
                         totales_incidencia, totales_mortalidad, anio, ooad, unidad_medica, metrica)

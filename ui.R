@@ -1,5 +1,6 @@
 # ui.R
 
+source("modules/inicio_portada.R")
 source("modules/metric_summary.R")
 source("modules/age_sex_graph.R")
 source("modules/time_chart.R")
@@ -10,7 +11,7 @@ source("modules/indicadores_cruce.R")
 
 ui <- page_navbar(
   title = tagList(
-    "Diabetes CIIMSS Prototipo",
+    "Diabetes CIIMSS",
     tags$img(
       src = "gobimss.png",
       height = "35px",
@@ -19,10 +20,16 @@ ui <- page_navbar(
   ),
   id = "navbar",
   sidebar = sidebar(
+    id = "main_sidebar",
     selectInput("anio", "Año:", choices = NULL, selectize = TRUE),
     selectInput("ooad", "OOAD:", choices = NULL),
     selectInput("unidad_medica", "Unidad Médica:", choices = NULL),
     selectInput("metric_choice", "Métrica a analizar:", choices = metric_choices, selected = "Incidencia")
+  ),
+  nav_panel(
+    title = "Inicio",
+    icon = icon("home"),
+    inicio_portada_UI("inicio_portada")
   ),
   nav_panel(
     title = "Métricas principales",
