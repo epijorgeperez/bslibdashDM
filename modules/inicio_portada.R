@@ -238,7 +238,7 @@ inicio_portada_UI <- function(id) {
       # Footer
       div(
         style = "text-align: center; padding: 1.5rem; background-color: #f8f9fa; border-radius: 5px; margin-top: 2rem;",
-        p(strong("CIIMSS - Centro de Investigación e Inteligencia en Salud del IMSS"), 
+        p(strong("CIIMSS - Centro de Inteligencia en Salud del IMSS"), 
           style = "color: #006456; margin-bottom: 0.5rem;"),
         p("Tablero desarrollado para el análisis integral del comportamiento epidemiológico de la diabetes",
           style = "color: #6c757d; font-size: 0.9rem;")
