@@ -172,8 +172,8 @@ inicio_portada_UI <- function(id) {
                h5(icon("percentage"), " Prevalencia", style = "color: #691A32; margin-bottom: 1rem;"),
                div(
                  style = "background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;",
-                 p(strong("Definición:"), " Proporción de pacientes con diabetes activos"),
-                 p(strong("Fórmula:"), " (Pacientes DM / PAMF) × 100"),
+                 p(strong("Definición:"), " Porcentaje de derechohabientes con diagnóstico de Diabetes Mellitus"),
+                 p(strong("Fórmula:"), " (Pacientes DM / Población Adscrita a Médico Familiar) × 100"),
                  p(strong("Unidad:"), " Porcentaje (%)"),
                  p(strong("Fuente:"), " tb_censo_DM")
                ),
@@ -190,7 +190,7 @@ inicio_portada_UI <- function(id) {
                  style = "background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;",
                  p(strong("Definición:"), " Promedio de días de estancia hospitalaria por diabetes"),
                  p(strong("Fórmula:"), " mean(DiasEstancia_DM_Adsc)"),
-                 p(strong("Unidad:"), " Días promedio por hospitalización"),
+                 p(strong("Unidad:"), " Días de estancia promedio por hospitalización"),
                  p(strong("Fuente:"), " tb_egreso_dm")
                )
              ),
@@ -215,7 +215,7 @@ inicio_portada_UI <- function(id) {
                h5(icon("bed"), " Incapacidades", style = "color: #691A32; margin-bottom: 1rem;"),
                div(
                  style = "background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;",
-                 p(strong("Definición:"), " Días de incapacidad temporal por diabetes"),
+                 p(strong("Definición:"), " Días de incapacidad temporal por diabetes por cada 100 trabajadores asegurados"),
                  p(strong("Fórmula:"), " (Días incapacidad / Población RT) × 100"),
                  p(strong("Unidad:"), " Días por 100 derechohabientes en RT"),
                  p(strong("Fuente:"), " tb_dm_incap")
@@ -223,7 +223,7 @@ inicio_portada_UI <- function(id) {
                h5(icon("calendar-alt"), " Días por Incapacidad Promedio", style = "color: #691A32; margin-bottom: 1rem;"),
                div(
                  style = "background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;",
-                 p(strong("Definición:"), " Promedio de días por cada incapacidad temporal"),
+                 p(strong("Definición:"), " Promedio de duración en días por cada incapacidad temporal emitida por DM"),
                  p(strong("Fórmula:"), " (Total NDIAS / Total FREC)"),
                  p(strong("Unidad:"), " Días promedio por incapacidad"),
                  p(strong("Fuente:"), " tb_dm_incap")
