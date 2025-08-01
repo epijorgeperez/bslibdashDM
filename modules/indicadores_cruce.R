@@ -168,6 +168,52 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
     output$correlation_plot <- renderPlotly({
       req(correlation_data(), input$indicator_x, input$indicator_y, reference_values())
       
+      # Calculate statistical correlation
+      corr_data <- correlation_data()
+      x_vals <- corr_data[[input$indicator_x]]
+      y_vals <- corr_data[[input$indicator_y]]
+      
+      # Remove NA values for correlation calculation
+      complete_cases <- complete.cases(x_vals, y_vals)
+      x_clean <- x_vals[complete_cases]
+      y_clean <- y_vals[complete_cases]
+      
+      # Initialize correlation text variables
+      corr_text <- ""
+      significance <- ""
+      
+      # Calculate correlation coefficient and p-value
+      if(length(x_clean) > 2 && length(y_clean) > 2) {
+        corr_test <- cor.test(x_clean, y_clean, method = "pearson")
+        corr_coef <- as.numeric(corr_test$estimate)
+        corr_coef <- round(corr_coef, 3)
+        p_value <- corr_test$p.value
+        
+        # Interpret correlation strength
+        corr_strength <- if(abs(corr_coef) >= 0.7) {
+          "Fuerte"
+        } else if(abs(corr_coef) >= 0.4) {
+          "Moderada"
+        } else if(abs(corr_coef) >= 0.2) {
+          "Débil"
+        } else {
+          "Muy Débil"
+        }
+        
+        # Format p-value
+        p_text <- if(p_value < 0.001) "p < 0.001" else paste("p =", round(p_value, 3))
+        
+        # Create correlation text for subtitle
+        corr_text <- paste0("r = ", corr_coef, " (", corr_strength, "), ", p_text)
+        significance <- if(p_value < 0.05) "Significativa" else "No Significativa"
+        
+        message("Correlation analysis: ", corr_text, " - ", significance)
+      } else {
+        corr_text <- "Datos insuficientes para correlación"
+        significance <- ""
+        message("Insufficient data for correlation analysis")
+      }
+      
       # Get reference values for quadrant lines
       ref_vals <- reference_values()
       x_ref <- ref_vals$valor_ref[ref_vals$desc_indicador == input$indicator_x]
@@ -290,8 +336,26 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
           color = "Unidad"
         )
 
-      # Convert to interactive plot
-      ggplotly(p, tooltip = "text")
+      # Convert to interactive plot and add correlation annotation
+      plotly_obj <- ggplotly(p, tooltip = "text")
+      
+      # Add correlation annotation if available
+      if(corr_text != "") {
+        plotly_obj <- plotly_obj %>%
+          add_annotations(
+            text = paste("Correlación:", corr_text, "-", significance),
+            x = 0.02, y = 0.98,
+            xref = "paper", yref = "paper",
+            xanchor = "left", yanchor = "top",
+            showarrow = FALSE,
+            font = list(size = 12, color = "darkblue"),
+            bgcolor = "rgba(255,255,255,0.8)",
+            bordercolor = "gray",
+            borderwidth = 1
+          )
+      }
+      
+      plotly_obj
     })
   })
 }
