@@ -81,13 +81,6 @@ ui <- page_navbar(
   #),
   nav_panel(
     title = "Proceso DM y su impacto",
-    layout_column_wrap(
-      width = 1,
-      card(
-        full_screen = TRUE,
-        card_header("Indicadores a través del tiempo"),
-        indicadores_cruce_UI("indicadores_cruce")
-      )
-    )
+    indicadores_cruce_UI("indicadores_cruce")
   )
 )

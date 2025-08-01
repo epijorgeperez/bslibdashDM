@@ -40,7 +40,7 @@ function(input, output, session) {
 
   #indicadores_table_server("indicadores_table", data_indicadores, anio, unidad_medica)
 
-  indicadores_cruce_server("indicadores_cruce", data_indicadores, reactive(input$anio), reactive(input$unidad_medica))
+  indicadores_cruce_server("indicadores_cruce", data_indicadores, anio, unidad_medica)
   
   # Uncomment if you're using a database connection
   # session$onSessionEnded(function() {

@@ -420,17 +420,24 @@ tryCatch({
 cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "utf-8"))
 
 data_indicadores <- reactiveVal({
+  # Load the catalog table with reference values
+  cat_indicadores <- load_data("SELECT * FROM tb_cat_historico_indicadores")
+  
   data <- load_data("SELECT * FROM tb_datos_historico_indicadores") %>%
+  #data %>%
     select(-nombre_unidad)%>%
     filter(digito_equivalencia %in% c(558, 470, 5, 1, 8, 9, 7, 3, 6)) %>%
     left_join(select(cuums, ClavePresupuestal, DenominacionUnidad), by=c("clave" = "ClavePresupuestal"))%>% 
     left_join(cat_ind, by=join_by(nom_indicador==codigo)) %>%
+    left_join(select(cat_indicadores, nom_indicador, anio, valor_ref, rango_esperado), by = c("nom_indicador" = "nom_indicador", "anio" = "anio")) %>%
     mutate(nombre_unidad = case_when(
       clave == "00" ~ "Nacional",
       clave == "14" ~ "Jalisco",
       TRUE ~ DenominacionUnidad
-    )) %>%
-    mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador))
+    )) %>% 
+    mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador),
+           valor_ref = as.numeric(valor_ref),
+           lugar_esperado = ifelse(startsWith(rango_esperado, ">"), "mayor", "menor")) #%>% head()
   data
 })
 
