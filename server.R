@@ -6,6 +6,7 @@ source("modules/map_chart.R")
 source("modules/test_mod.R")
 #source("modules/indicadores_table.R")
 source("modules/indicadores_cruce.R")
+source("modules/simple_forecasting.R")
 
 function(input, output, session) {
   
@@ -41,6 +42,9 @@ function(input, output, session) {
   #indicadores_table_server("indicadores_table", data_indicadores, anio, unidad_medica)
 
   indicadores_cruce_server("indicadores_cruce", data_indicadores, anio, unidad_medica)
+
+  simple_forecasting_server("forecasting", metrica, totales_anuales, totales_consultas, totales_incap, totales_hosp, 
+                            totales_mortalidad, totales_incidencia, ooad, unidad_medica)
   
   # Uncomment if you're using a database connection
   # session$onSessionEnded(function() {

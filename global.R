@@ -19,6 +19,8 @@ library(sf)
 library(plotly)
 library(ggrepel)
 library(dotenv)
+library(forecast)
+library(DT)
 
 # Configure Shiny encoding options for proper Spanish character display
 options(

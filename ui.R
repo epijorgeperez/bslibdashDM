@@ -8,6 +8,7 @@ source("modules/map_chart.R")
 source("modules/test_mod.R")
 #source("modules/indicadores_table.R")
 source("modules/indicadores_cruce.R")
+source("modules/simple_forecasting.R")
 
 ui <- page_navbar(
   title = tagList(
@@ -82,5 +83,10 @@ ui <- page_navbar(
   nav_panel(
     title = "Proceso DM y su impacto",
     indicadores_cruce_UI("indicadores_cruce")
+  ),
+  nav_panel(
+    title = "Pronósticos",
+    icon = icon("chart-line"),
+    simple_forecasting_UI("forecasting")
   )
 )
