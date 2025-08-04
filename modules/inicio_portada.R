@@ -232,7 +232,110 @@ inicio_portada_UI <- function(id) {
            )
          )
              ),
+
+      # Advanced Analytics Section - Proceso DM y su Impacto
+      card(
+        card_header(
+          icon("project-diagram"), " Análisis Avanzado: Proceso DM y su Impacto",
+          style = "background-color: #AE851E; color: white; font-weight: bold;"
+        ),
+        card_body(
+          div(
+            class = "row",
+            div(
+              class = "col-md-6",
+              h5(icon("chart-line"), " Evolución Temporal", style = "color: #AE851E; margin-bottom: 1rem;"),
+              p("Seguimiento de indicadores específicos a lo largo del tiempo:"),
+              tags$ul(
+                tags$li("Comparación entre Nacional, OOAD y Unidad Médica"),
+                tags$li("Visualización interactiva con dygraphs"),
+                tags$li("Datos mensuales de múltiples años")
+              ),
+              
+              h5(icon("balance-scale"), " División de Indicadores", style = "color: #AE851E; margin-bottom: 1rem;"),
+              div(
+                style = "background-color: #f8f9fa; padding: 1rem; border-radius: 5px;",
+                p(strong("Productividad (Eje X):"), " DM 01, DM 02, DM 04, DM 05, DM 06"),
+                p(style = "font-size: 0.9rem; color: #6c757d;", "Indicadores de proceso y eficiencia operativa"),
+                p(strong("Impacto (Eje Y):"), " DM 03, DM 07, DM 08, DM 09"),
+                p(style = "font-size: 0.9rem; color: #6c757d;", "Indicadores de resultados en salud")
+              )
+            ),
+            div(
+              class = "col-md-6",
+              h5(icon("crosshairs"), " Análisis de Cuadrantes", style = "color: #AE851E; margin-bottom: 1rem;"),
+              div(
+                style = "background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;",
+                p(strong("Líneas de Referencia:"), " Dividen el gráfico en 4 cuadrantes"),
+                tags$ul(
+                  style = "font-size: 0.9rem;",
+                  tags$li(strong("Rojas:"), " Valores de referencia oficiales"),
+                  tags$li(strong("Grises:"), " Valores promedio (cuando no hay referencia)")
+                ),
+                p(strong("Cuadrante Meta:"), " Zona verde que indica la combinación óptima según los valores esperados")
+              ),
+              
+              h5(icon("calculator"), " Estadística de Correlación", style = "color: #AE851E; margin-bottom: 1rem;"),
+              div(
+                style = "background-color: #f8f9fa; padding: 1rem; border-radius: 5px;",
+                p(strong("Coeficiente r:"), " Mide la fuerza de la relación entre indicadores"),
+                tags$ul(
+                  style = "font-size: 0.9rem;",
+                  tags$li("Fuerte: |r| ≥ 0.7"),
+                  tags$li("Moderada: 0.4 ≤ |r| < 0.7"),
+                  tags$li("Débil: 0.2 ≤ |r| < 0.4"),
+                  tags$li("Muy Débil: |r| < 0.2")
+                ),
+                p(strong("Significancia:"), " p < 0.05 indica relación estadísticamente significativa")
+              )
+            )
+          )
+        )
+      ),
       
+      # Forecasting Section
+      card(
+        card_header(
+          icon("chart-line"), " Módulo de Pronósticos",
+          style = "background-color: #A02042; color: white; font-weight: bold;"
+        ),
+        card_body(
+          div(
+            class = "row",
+            div(
+              class = "col-md-6",
+              h5(icon("robot"), " Selección Automática", style = "color: #A02042; margin-bottom: 1rem;"),
+              p("El sistema compara automáticamente métodos ETS y ARIMA, seleccionando el mejor basado en AIC."),
+              
+              h5(icon("cogs"), " Métodos Disponibles", style = "color: #A02042; margin-bottom: 1rem;"),
+              tags$ul(
+                tags$li(strong("Automático:"), " Selección óptima por AIC"),
+                tags$li(strong("ETS:"), " Suavizado exponencial"),
+                tags$li(strong("ARIMA:"), " Modelos autoregresivos"),
+                tags$li(strong("Naive:"), " Modelo base de comparación")
+              )
+            ),
+            div(
+              class = "col-md-6",
+              h5(icon("calendar-alt"), " Configuración", style = "color: #A02042; margin-bottom: 1rem;"),
+              tags$ul(
+                tags$li("Períodos a pronosticar: 1-24 años"),
+                tags$li("Niveles de confianza: 80%, 90%, 95%"),
+                tags$li("Datos filtrados automáticamente (solo años completos)")
+              ),
+              
+              h5(icon("chart-area"), " Resultados", style = "color: #A02042; margin-bottom: 1rem;"),
+              tags$ul(
+                tags$li("Gráfico interactivo con intervalos de confianza"),
+                tags$li("Métricas de precisión (RMSE, MAE, MAPE)"),
+                tags$li("Tabla de valores pronosticados")
+              )
+            )
+          )
+        )
+      ),
+      
+
       br(),
       
       # Footer
