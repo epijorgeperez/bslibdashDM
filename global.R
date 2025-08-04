@@ -1,3 +1,6 @@
+# Configurar variables de entorno para usuario shiny
+Sys.setenv(OPENSSL_CONF = "/etc/shiny-server/openssl.cnf")
+
 # Global variables and library loading can go here
 library(shiny)
 library(bslib)
@@ -28,8 +31,7 @@ options(
   readr.default_locale = readr::locale(encoding = "UTF-8")
 )
 
-# Configurar variables de entorno para usuario shiny
-Sys.setenv(OPENSSL_CONF = "/etc/shiny-server/openssl.cnf")
+
 
 # Cargar variables de entorno desde .env
 if (file.exists(".env")) {
