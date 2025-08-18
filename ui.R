@@ -24,7 +24,7 @@ ui <- page_navbar(
     id = "main_sidebar",
     selectInput("anio", "Año:", choices = NULL, selectize = TRUE),
     selectInput("ooad", "OOAD:", choices = NULL),
-    selectInput("unidad_medica", "Unidad Médica:", choices = NULL),
+    selectInput("unidad_medica", "Unidad Médica:", choices = NULL, selected ="UMF 168 Tepatitlán"),
     selectInput("metric_choice", "Métrica a analizar:", choices = metric_choices, selected = "Incidencia")
   ),
   nav_panel(

@@ -43,8 +43,15 @@ function(input, output, session) {
 
   indicadores_cruce_server("indicadores_cruce", data_indicadores, anio, unidad_medica)
 
-  simple_forecasting_server("forecasting", metrica, totales_anuales, totales_consultas, totales_incap, totales_hosp, 
-                            totales_mortalidad, totales_incidencia, ooad, unidad_medica)
+  simple_forecasting_server("forecasting", metrica, 
+                            # Yearly data
+                            totales_anuales, totales_consultas, totales_incap, totales_hosp, 
+                            totales_mortalidad, totales_incidencia,
+                            # Monthly data  
+                            totales_anuales_mensuales, totales_consultas_mensuales, totales_incap_mensuales, 
+                            totales_hosp_mensuales, totales_mortalidad_mensuales, totales_incidencia_mensuales,
+                            # Other parameters
+                            ooad, unidad_medica)
   
   # Uncomment if you're using a database connection
   # session$onSessionEnded(function() {
