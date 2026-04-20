@@ -69,24 +69,26 @@ indicadores_cruce_server <- function(id, data_indicadores, anio, unidad_medica) 
       
       # Filter indicators by category based on indicator codes
       productivity_indicators <- all_indicators %>%
-        filter(substr(nom_indicador, 1, 5) %in% c("DM 01", "DM 02", "DM 04", "DM 05", "DM 06")) %>%
+        filter(digito_equivalencia %in% c(1, 470, 560)) %>%
         pull(desc_indicador) %>%
         unique()
       
       impact_indicators <- all_indicators %>%
-        filter(substr(nom_indicador, 1, 5) %in% c("DM 03", "DM 07", "DM 08", "DM 09")) %>%
+        filter(digito_equivalencia %in% c(561, 8, 9)) %>%
         pull(desc_indicador) %>%
         unique()
       
       # Update dropdowns for time series (all indicators)
-      all_indicator_choices <- unique(all_indicators$desc_indicador)
+      all_indicator_choices <- sort(unique(all_indicators$desc_indicador))
       updateSelectInput(session, "selected_indicator", choices = all_indicator_choices)
       
-      # Update dropdowns for correlation analysis (categorized)
-      updateSelectInput(session, "indicator_x", choices = productivity_indicators, 
-                       selected = if(length(productivity_indicators) > 0) productivity_indicators[1] else NULL)
-      updateSelectInput(session, "indicator_y", choices = impact_indicators, 
-                       selected = if(length(impact_indicators) > 0) impact_indicators[1] else NULL)
+      # Update dropdowns for correlation analysis (categorized, also alphabetical order)
+      updateSelectInput(session, "indicator_x",
+                       choices = sort(productivity_indicators),
+                       selected = if(length(productivity_indicators) > 0) sort(productivity_indicators)[1] else NULL)
+      updateSelectInput(session, "indicator_y",
+                       choices = sort(impact_indicators),
+                       selected = if(length(impact_indicators) > 0) sort(impact_indicators)[1] else NULL)
     })
     
     # Update lag slider max value based on available data

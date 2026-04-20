@@ -75,6 +75,12 @@ get_database_connection <- function() {
       Database = DB_NAME,
       UID = DB_USER,
       PWD = DB_PASSWORD,
+      Port = 1433,
+      Encrypt = "no",
+      TrustServerCertificate = "yes",
+      MARS_Connection = "No",
+      `Packet Size` = "4096",
+      Timeout = 30,
       encoding = "UTF-8"
     )
     
@@ -109,38 +115,49 @@ epi_week_to_month_aweek <- function(year, epi_week) {
   return(month)
 }
 
-# Función para cargar datos (simplificada)
-load_data <- function(query) {
-  if (!dbIsValid(connection_details)) {
-    stop("No active database connection")
+# Reconecta la sesión DB cuando hay fallas de transporte
+reconnect_db <- function() {
+  if (exists("connection_details") && !is.null(connection_details)) {
+    try(dbDisconnect(connection_details), silent = TRUE)
   }
-  
-  tryCatch({
-    data <- dbGetQuery(connection_details, query)
-    message("✅ Query OK. Rows: ", nrow(data))
-    
-    # Fix encoding
-    data[] <- lapply(data, function(x) {
-      if (is.character(x)) {
-        Encoding(x) <- "UTF-8"
-      }
-      return(x)
-    })
-    
-    return(data)
-  }, error = function(e) {
-    message("❌ Query failed: ", e$message)
-    stop("Database query failed: ", e$message)
-  })
+  connection_details <<- get_database_connection()
 }
 
-# Cerrar conexión al terminar
-onStop(function() {
-  if (exists("connection_details") && dbIsValid(connection_details)) {
-    dbDisconnect(connection_details)
-    message("🔌 Database disconnected")
+is_tds_error <- function(msg) {
+  grepl(
+    "Protocol error in TDS stream|08S01|Communication link failure|TCP Provider",
+    msg,
+    ignore.case = TRUE
+  )
+}
+
+# Función para cargar datos con reintentos para errores de transporte/TDS
+load_data <- function(query, max_attempts = 3, sleep_sec = 2) {
+  for (attempt in seq_len(max_attempts)) {
+    if (!dbIsValid(connection_details)) reconnect_db()
+    out <- tryCatch({
+      data <- dbGetQuery(connection_details, query)
+      message("✅ Query OK. Rows: ", nrow(data))
+      data[] <- lapply(data, function(x) {
+        if (is.character(x)) Encoding(x) <- "UTF-8"
+        x
+      })
+      data
+    }, error = function(e) {
+      msg <- conditionMessage(e)
+      message("❌ Query failed (attempt ", attempt, "/", max_attempts, "): ", msg)
+      if (is_tds_error(msg) && attempt < max_attempts) {
+        message("🔁 Reconnecting due to TDS error...")
+        reconnect_db()
+        Sys.sleep(sleep_sec)
+        return(NULL)
+      }
+      stop("Database query failed: ", msg)
+    })
+    if (!is.null(out)) return(out)
   }
-})
+  stop("Database query failed after retries")
+}
 
 message("=== Database setup complete ===")
 
@@ -277,16 +294,46 @@ poblacion_totales_rt_mensuales <- tryCatch({
 message("Loading raw datasets (optimized)...")
 
 # Load each table only once
-raw_tb_censo_dm <- load_data("SELECT * FROM dbo.tb_censo_DM")
-raw_tb_consulta_dm <- load_data("SELECT * FROM tb_consulta_dm") 
-raw_tb_egreso_dm <- load_data("SELECT * FROM dbo.tb_egreso_dm")
-raw_tb_dm_incap <- load_data("SELECT * FROM dbo.tb_dm_incap") %>%
+raw_tb_censo_dm <- load_data("
+  SELECT
+    Anio, Mes, Sexo, Cve_Presupuestal, Nombre_Unidad, Nombre_OOAD, Pacientes_DM, PAMF
+  FROM dbo.tb_censo_DM
+  WHERE Anio >= 2018
+")
+raw_tb_consulta_dm <- load_data("
+  SELECT
+    Anio, Mes, Parametro, Sexo, Grupo_edad, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal, Dato
+  FROM tb_consulta_dm
+  WHERE Anio >= 2018
+")
+raw_tb_egreso_dm <- load_data("
+  SELECT
+    Anio, Mes, Parametro, Especialidad, Sexo, Grupo_edad, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal, Dato
+  FROM dbo.tb_egreso_dm
+  WHERE Anio >= 2018
+")
+raw_tb_dm_incap <- load_data("
+  SELECT
+    PERIODO, SEMEPI, NIVEL, descnivel, descgedad, TIP_SEXO, NDIAS, FREC
+  FROM dbo.tb_dm_incap
+  WHERE PERIODO >= 2018
+") %>%
   mutate(NDIAS = as.numeric(NDIAS),
          NDIAS = ifelse(is.na(NDIAS), 0, NDIAS),
          FREC = as.numeric(FREC),
          FREC = ifelse(is.na(FREC), 0, FREC))
-raw_morbi_diabetes <- load_data("SELECT * FROM MORBI_DIABETES")
-raw_morta_diabetes <- load_data("SELECT * FROM dbo.MORTA_DIABETES")
+raw_morbi_diabetes <- load_data("
+  SELECT
+    Anio, Mes, Sexo, Grupo_edad, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal, Dato
+  FROM MORBI_DIABETES
+  WHERE Anio >= 2018
+")
+raw_morta_diabetes <- load_data("
+  SELECT
+    Anio, Mes, Sexo, Grupo_edad, Nombre_OOAD, Nombre_Unidad, Cve_Presupuestal, Dato
+  FROM dbo.MORTA_DIABETES
+  WHERE Anio >= 2018
+")
 
 message("Raw datasets loaded successfully")
 
@@ -707,7 +754,9 @@ tryCatch({
   jalisco_shape <- st_sf(data.frame(NOM_ENT = character(0), geometry = st_sfc()))
 })
 
-cat_ind <- read_csv("data/cat_indi_dm.csv", locale = locale(encoding = "utf-8"))
+cat_ind <- load_data("SELECT digito_equivalencia, nom_indicador, desc_indicador FROM tb_cat_historico_indicadores WHERE anio = 2025;") %>%
+              rename('nom_indicador_estandar'='nom_indicador', 'desc_indicador_estandar'='desc_indicador')
+
 
 message("🔧 Creating data_indicadores...")
 data_indicadores <- reactiveVal({
@@ -715,22 +764,21 @@ data_indicadores <- reactiveVal({
     # Load the catalog table with reference values
     cat_indicadores <- load_data("SELECT * FROM tb_cat_historico_indicadores")
     
-    data <- load_data("SELECT * FROM tb_datos_historico_indicadores") %>%
+    data <- load_data("SELECT * FROM tb_datos_historico_indicadores WHERE digito_equivalencia IN (1, 470, 560, 561, 8, 9);") %>%
     #data %>%
       select(-nombre_unidad)%>%
-      filter(digito_equivalencia %in% c(558, 470, 5, 1, 8, 9, 7, 3, 6)) %>%
+      #filter(digito_equivalencia %in% c(558, 470, 5, 1, 8, 9, 7, 3, 6)) %>%
       left_join(select(cuums, ClavePresupuestal, DenominacionUnidad), by=c("clave" = "ClavePresupuestal"))%>% 
-      left_join(cat_ind, by=join_by(nom_indicador==codigo)) %>%
-      left_join(select(cat_indicadores, nom_indicador, anio, valor_ref, rango_esperado), by = c("nom_indicador" = "nom_indicador", "anio" = "anio")) %>%
+      left_join(select(cat_indicadores, digito_equivalencia, desc_indicador, anio, valor_ref, rango_esperado), by = c("digito_equivalencia" = "digito_equivalencia", "anio" = "anio")) %>%
+      left_join(cat_ind, by=join_by(digito_equivalencia==digito_equivalencia)) %>%
       mutate(nombre_unidad = case_when(
         clave == "00" ~ "Nacional",
         clave == "14" ~ "Jalisco",
         TRUE ~ DenominacionUnidad
-      )) %>% 
-      mutate(desc_indicador = paste(nom_indicador, " - ", desc_indicador),
+      )) %>%
+      mutate(desc_indicador = paste(nom_indicador_estandar, " - ", desc_indicador_estandar),
              valor_ref = as.numeric(valor_ref),
              lugar_esperado = ifelse(startsWith(rango_esperado, ">"), "mayor", "menor")) #%>% head()
-    
     message("✅ data_indicadores created successfully")
     data
   }, error = function(e) {

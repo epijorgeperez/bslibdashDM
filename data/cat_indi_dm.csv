@@ -1,10 +1,7 @@
-﻿codigo,desc_indicador
-DM 01,Cobertura de detección de primera vez de Diabetes mellitus en población derechohabiente de 20 años y más
-DM 02,Índice de confirmación de Diabetes mellitus en casos sospechosos en población derechohabiente de 20 años y más
-DM 03,"Tasa de incidencia de Diabetes mellitus, en población derechohabiente de 20 años y más"
-DM 04,"Porcentaje de pacientes con Diabetes Mellitus de 20 años y más, en control adecuado de glucemia en ayuno (glucosa en ayuno, punto de corte 70-130 mg/dl)"
-DM 05,"Porcentaje de pacientes diabéticos de 20 años y más, con cifras de tensión arterial en control"
-DM 06,"Porcentaje de pacientes con Diabetes mellitus, sin registro de seguimiento Anual"
-DM 07,Tasa de hospitalizaciones evitables por Diabetes mellitus en población derechohabiente de 20 años y más
-DM 08,Índice de amputación debida a complicación por Diabetes mellitus en pacientes de 20 años y más
-DM 09,"Tasa de incidencia de Invalidez por Diabetes mellitus y sus complicaciones por cada 100,000 trabajadores asegurados, según Unidad Médica de adscripción del trabajador"
+﻿codigo,digito_equivalencia,desc_indicador
+DM 01,1,Cobertura de detección de diabetes en población derechohabiente de 20 años y más.
+DM 02,470,"Índice de confirmación de diabetes en casos sospechosos, población derechohabiente de 20 años y más."
+DM 03,560,Porcentaje de pacientes que viven con diabetes en control glucémico con hemoglobina glucosilada (HbA1c) menor o igual a 7%.
+DM 04,561,Tasa de hospitalizaciones evitables por diabetes en población derechohabiente de 20 a 74 años.
+DM 05,8,Índice de amputación debida a complicación por diabetes en pacientes de 20 años y más.
+DM 06,9,"Tasa de incidencia de invalidez por diabetes y sus complicaciones por cada 100,000 trabajadores asegurados, según unidad médica de adscripción del trabajador."
